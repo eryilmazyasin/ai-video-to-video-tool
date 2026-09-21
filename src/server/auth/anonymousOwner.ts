@@ -7,10 +7,18 @@ const anonymousOwnerMaxAge = 60 * 60 * 24 * 30;
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function getAnonymousOwner(request: NextRequest) {
+export function getExistingAnonymousOwner(request: NextRequest) {
   const existingOwnerId = request.cookies.get(anonymousOwnerCookieName)?.value;
 
-  if (existingOwnerId && uuidPattern.test(existingOwnerId)) {
+  return existingOwnerId && uuidPattern.test(existingOwnerId)
+    ? existingOwnerId
+    : null;
+}
+
+export function getAnonymousOwner(request: NextRequest) {
+  const existingOwnerId = getExistingAnonymousOwner(request);
+
+  if (existingOwnerId) {
     return { ownerId: existingOwnerId, shouldSetCookie: false };
   }
 

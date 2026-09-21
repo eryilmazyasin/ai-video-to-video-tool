@@ -3,7 +3,7 @@ export interface UploadcareFileInfo {
   sizeBytes: number;
   mimeType: string;
   originalFilename: string;
-  originalFileUrl: string | null;
+  originalFileUrl: string;
   cdnUrl: string;
   isReady: boolean;
   isStored: boolean;

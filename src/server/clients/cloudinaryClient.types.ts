@@ -19,4 +19,5 @@ export interface CloudinaryVideoUpload {
 export interface UploadVideoFromUrlInput {
   sourceUrl: string;
   publicId: string;
+  overwrite?: boolean;
 }

@@ -2,13 +2,16 @@ import { ObjectId, type Collection, type WithId } from "mongodb";
 
 import { getDatabase } from "@/server/db/mongodb";
 import type {
+  CompleteTransformationOutputInput,
   CreateReadyTransformationInput,
   TransformationDocument,
   TransformationError,
+  TransformationRequest,
 } from "@/server/types/transformation.types";
 
 const collectionName = "transformations";
 let indexInitializationPromise: Promise<void> | undefined;
+const outputSaveLeaseDurationMilliseconds = 5 * 60 * 1_000;
 
 async function initializeIndexes(
   collection: Collection<TransformationDocument>,
@@ -89,6 +92,7 @@ export async function listRecentForOwner(ownerId: string, limit: number) {
 export async function claimForSubmission(
   transformationId: ObjectId,
   ownerId: string,
+  request: TransformationRequest,
 ) {
   const collection = await getTransformationCollection();
   const now = new Date();
@@ -96,27 +100,37 @@ export async function claimForSubmission(
   // This atomic check stops a double click from creating two provider jobs.
   return collection.findOneAndUpdate(
     { _id: transformationId, ownerId, status: "ready" },
-    { $set: { status: "submitting", updatedAt: now } },
+    { $set: { status: "submitting", request, updatedAt: now } },
     { returnDocument: "after" },
   );
 }
 
 export async function markQueued(
   transformationId: ObjectId,
-  providerJobId: string,
-  rawStatus: string,
+  input: {
+    providerJobId: string;
+    rawStatus?: string;
+    creditsCharged?: number;
+  },
 ) {
   const collection = await getTransformationCollection();
   const now = new Date();
 
   // Do not let a late failure overwrite a completed result.
+  const providerFields = {
+    "provider.jobId": input.providerJobId,
+    ...(input.rawStatus ? { "provider.rawStatus": input.rawStatus } : {}),
+    ...(input.creditsCharged !== undefined
+      ? { "provider.creditsCharged": input.creditsCharged }
+      : {}),
+  };
+
   return collection.findOneAndUpdate(
     { _id: transformationId, status: "submitting" },
     {
       $set: {
         status: "queued",
-        "provider.jobId": providerJobId,
-        "provider.rawStatus": rawStatus,
+        ...providerFields,
         updatedAt: now,
       },
     },
@@ -134,6 +148,153 @@ export async function markFailed(
   return collection.findOneAndUpdate(
     { _id: transformationId, status: { $ne: "completed" } },
     { $set: { status: "failed", error, updatedAt: now } },
+    { returnDocument: "after" },
+  );
+}
+
+export async function findByProviderJobId(providerJobId: string) {
+  const collection = await getTransformationCollection();
+
+  return collection.findOne({ "provider.jobId": providerJobId });
+}
+
+export async function markProcessingByProviderJobId(
+  providerJobId: string,
+  rawStatus: string,
+) {
+  const collection = await getTransformationCollection();
+  const now = new Date();
+
+  // A delayed started event must not move a completed transformation backwards.
+  return collection.findOneAndUpdate(
+    { "provider.jobId": providerJobId, status: "queued" },
+    {
+      $set: {
+        status: "processing",
+        "provider.rawStatus": rawStatus,
+        updatedAt: now,
+      },
+    },
+    { returnDocument: "after" },
+  );
+}
+
+export async function claimForOutputSave(
+  providerJobId: string,
+  input: { rawStatus: string; creditsCharged?: number },
+) {
+  const collection = await getTransformationCollection();
+  const now = new Date();
+  const staleOutputSaveBefore = new Date(
+    now.getTime() - outputSaveLeaseDurationMilliseconds,
+  );
+
+  // Only one active delivery may copy the output; stale leases and retryable failures can recover.
+  return collection.findOneAndUpdate(
+    {
+      "provider.jobId": providerJobId,
+      $or: [
+        { status: "queued" },
+        { status: "processing" },
+        {
+          status: "failed",
+          "error.stage": "output",
+          "error.retryable": true,
+        },
+        { status: "saving_output", updatedAt: { $lt: staleOutputSaveBefore } },
+      ],
+    },
+    {
+      $set: {
+        status: "saving_output",
+        "provider.rawStatus": input.rawStatus,
+        ...(input.creditsCharged !== undefined
+          ? { "provider.creditsCharged": input.creditsCharged }
+          : {}),
+        updatedAt: now,
+      },
+      $unset: { error: "" },
+    },
+    { returnDocument: "after" },
+  );
+}
+
+export async function markCompletedFromOutput(
+  transformationId: ObjectId,
+  output: CompleteTransformationOutputInput,
+) {
+  const collection = await getTransformationCollection();
+  const now = new Date();
+
+  return collection.findOneAndUpdate(
+    { _id: transformationId, status: "saving_output" },
+    {
+      $set: {
+        status: "completed",
+        output: {
+          cloudinaryPublicId: output.cloudinaryPublicId,
+          cloudinaryUrl: output.cloudinaryUrl,
+        },
+        "provider.rawStatus": output.rawStatus,
+        ...(output.creditsCharged !== undefined
+          ? { "provider.creditsCharged": output.creditsCharged }
+          : {}),
+        completedAt: now,
+        updatedAt: now,
+      },
+      $unset: { error: "" },
+    },
+    { returnDocument: "after" },
+  );
+}
+
+export async function markOutputCopyFailed(
+  transformationId: ObjectId,
+) {
+  const collection = await getTransformationCollection();
+  const now = new Date();
+
+  return collection.findOneAndUpdate(
+    { _id: transformationId, status: "saving_output" },
+    {
+      $set: {
+        status: "failed",
+        error: {
+          stage: "output",
+          code: "output_copy_failed",
+          message: "The generated video could not be saved. Retrying automatically.",
+          retryable: true,
+        },
+        updatedAt: now,
+      },
+    },
+    { returnDocument: "after" },
+  );
+}
+
+export async function markProviderErrored(
+  providerJobId: string,
+  rawStatus: string,
+) {
+  const collection = await getTransformationCollection();
+  const now = new Date();
+
+  // Provider error text is untrusted, so persist a fixed safe error instead.
+  return collection.findOneAndUpdate(
+    { "provider.jobId": providerJobId, status: { $in: ["queued", "processing"] } },
+    {
+      $set: {
+        status: "failed",
+        "provider.rawStatus": rawStatus,
+        error: {
+          stage: "processing",
+          code: "provider_processing_failed",
+          message: "The transformation could not be completed.",
+          retryable: false,
+        },
+        updatedAt: now,
+      },
+    },
     { returnDocument: "after" },
   );
 }

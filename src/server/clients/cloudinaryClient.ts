@@ -119,7 +119,7 @@ async function uploadVideoFromUrl(
     response = await getCloudinaryClient().uploader.upload(input.sourceUrl, {
       resource_type: "video",
       public_id: input.publicId,
-      overwrite: false,
+      overwrite: input.overwrite ?? false,
     });
   } catch {
     // Do not expose provider details because they can include signed URLs.
@@ -154,5 +154,7 @@ export function uploadOutputVideoFromUrl(
   return uploadVideoFromUrl({
     sourceUrl: input.sourceUrl,
     publicId: `ai-video-to-video/outputs/${providerJobId}`,
+    // A retry must be able to replace the same deterministic output asset.
+    overwrite: true,
   });
 }

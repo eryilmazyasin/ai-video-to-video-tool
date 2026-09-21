@@ -1,4 +1,5 @@
 import type { ObjectId } from "mongodb";
+import type { V1VideoToVideoCreateBody } from "magic-hour/types";
 
 export const transformationStatuses = [
   "staging",
@@ -43,17 +44,20 @@ export type ReadyTransformationProvider = Pick<
   inputFilePath: string;
 };
 
-export interface TransformationRequest {
-  prompt: string;
-  artStyle?: string;
-  startSeconds?: number;
-  endSeconds?: number;
-  fpsResolution?: "HALF" | "FULL";
-}
+// Deprecated width and height do not affect the current provider output.
+export type TransformationRequest = Omit<
+  V1VideoToVideoCreateBody,
+  "assets" | "height" | "width"
+>;
 
 export interface TransformationOutput {
   cloudinaryPublicId: string;
   cloudinaryUrl: string;
+}
+
+export interface CompleteTransformationOutputInput extends TransformationOutput {
+  rawStatus: string;
+  creditsCharged?: number;
 }
 
 export interface TransformationError {

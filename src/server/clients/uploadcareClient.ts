@@ -48,25 +48,20 @@ function getRequiredHttpsUrl(value: string, fieldName: string) {
   return value;
 }
 
-function getOptionalHttpsUrl(value: string | null, fieldName: string) {
-  if (!value) {
-    return null;
-  }
-
-  return getRequiredHttpsUrl(value, fieldName);
-}
-
 function normalizeFileInfo(file: FileInfo): UploadcareFileInfo {
+  const originalFileUrl = getRequiredHttpsUrl(
+    file.originalFileUrl ?? "",
+    "original file URL",
+  );
+
   return {
     uuid: file.uuid,
     sizeBytes: file.size,
     mimeType: file.mimeType,
     originalFilename: file.originalFilename,
-    originalFileUrl: getOptionalHttpsUrl(
-      file.originalFileUrl,
-      "original file URL",
-    ),
-    cdnUrl: getRequiredHttpsUrl(file.url, "CDN URL"),
+    originalFileUrl,
+    // file.url is the REST endpoint, so use the original CDN URL for video bytes.
+    cdnUrl: originalFileUrl,
     isReady: file.isReady,
     isStored: Boolean(file.datetimeStored),
   };

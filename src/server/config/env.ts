@@ -38,9 +38,14 @@ export function getUploadcareEnv() {
   };
 }
 
-export function getMagicHourEnv() {
+export function getMagicHourApiEnv() {
   return {
     apiKey: getRequiredEnvValue("MAGIC_HOUR_API_KEY"),
+  };
+}
+
+export function getMagicHourWebhookEnv() {
+  return {
     webhookSecret: getRequiredEnvValue("MAGIC_HOUR_WEBHOOK_SECRET"),
   };
 }

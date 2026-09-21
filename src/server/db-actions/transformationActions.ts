@@ -14,7 +14,7 @@ async function initializeIndexes(
   collection: Collection<TransformationDocument>,
 ) {
   if (!indexInitializationPromise) {
-    // Create indexes once per runtime instead of on every repository call.
+    // Create indexes once per runtime instead of on every database action.
     indexInitializationPromise = Promise.all([
       // This matches the owner-scoped history query without scanning other users' records.
       collection.createIndex({ ownerId: 1, createdAt: -1 }),

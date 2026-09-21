@@ -211,7 +211,7 @@ export function getFirstHttpsDownloadUrl(event: MagicHourVideoCompletedEvent) {
   }
 
   try {
-    return new URL(firstDownloadUrl).protocol === "https://"
+    return new URL(firstDownloadUrl).protocol === "https:"
       ? firstDownloadUrl
       : null;
   } catch {

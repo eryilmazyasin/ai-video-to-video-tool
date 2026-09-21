@@ -28,7 +28,7 @@ const initialValues: TransformationFormValues = {
   model: "default",
   promptType: "default",
   prompt: "",
-  version: "default",
+  version: "v2",
 };
 
 function isTransformationApiResponse(value: unknown): value is TransformationApiResponse {
@@ -414,7 +414,7 @@ export default function TransformationForm({ transformationId }: TransformationF
             ))}
           </select>
           <p className="mt-1.5 text-xs leading-5 text-zinc-500">
-            Use the default version unless you need a specific provider version.
+            V2 is the stable provider version. The provider default may point to an unavailable newer model.
           </p>
         </div>
 

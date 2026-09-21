@@ -13,6 +13,7 @@ import type {
   UploadcareUploadingEntry,
   UploadStage,
 } from "@/components/VideoUploader/VideoUploader.types";
+import { transformationHistoryRefreshEvent } from "@/shared/browserEvents";
 
 const maximumVideoSizeBytes = 50 * 1024 * 1024;
 const videoAcceptTypes = "video/mp4,video/quicktime,.mp4,.mov";
@@ -109,6 +110,7 @@ export default function VideoUploader() {
         setSourceVideo(body.transformation.sourceVideo);
         setTransformationId(body.transformation.id);
         setStage("ready");
+        window.dispatchEvent(new Event(transformationHistoryRefreshEvent));
       }
     } catch (requestError) {
       if (selectedUuidRef.current === uuid) {

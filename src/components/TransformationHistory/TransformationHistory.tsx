@@ -9,8 +9,16 @@ import type {
   TransformationHistoryResponse,
   TransformationHistoryStatus,
 } from "@/components/TransformationHistory/TransformationHistory.types";
+import { transformationHistoryRefreshEvent } from "@/shared/browserEvents";
 
 const historyPollIntervalMilliseconds = 4_500;
+
+const automaticallyUpdatedStatuses = new Set<TransformationHistoryStatus>([
+  "submitting",
+  "queued",
+  "processing",
+  "saving_output",
+]);
 
 const statusLabels: Record<TransformationHistoryStatus, string> = {
   staging: "Preparing source",
@@ -318,17 +326,41 @@ export default function TransformationHistory() {
   useEffect(() => {
     isMountedRef.current = true;
     const initialLoadTimeoutId = window.setTimeout(() => void loadHistory(), 0);
+    const handleHistoryRefresh = () => void loadHistory();
 
-    // Keep webhook-driven status changes visible without concurrent requests.
-    const intervalId = window.setInterval(() => void loadHistory(), historyPollIntervalMilliseconds);
+    window.addEventListener(
+      transformationHistoryRefreshEvent,
+      handleHistoryRefresh,
+    );
 
     return () => {
       isMountedRef.current = false;
       window.clearTimeout(initialLoadTimeoutId);
-      window.clearInterval(intervalId);
+      window.removeEventListener(
+        transformationHistoryRefreshEvent,
+        handleHistoryRefresh,
+      );
       abortControllerRef.current?.abort();
     };
   }, [loadHistory]);
+
+  useEffect(() => {
+    const hasActiveTransformation = transformations.some((transformation) =>
+      automaticallyUpdatedStatuses.has(transformation.status),
+    );
+
+    if (!hasActiveTransformation) {
+      return;
+    }
+
+    // Poll only while a provider job can still change its status.
+    const timeoutId = window.setTimeout(
+      () => void loadHistory(),
+      historyPollIntervalMilliseconds,
+    );
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadHistory, transformations]);
 
   return (
     <section className="mt-8" aria-labelledby="transformation-history-title">

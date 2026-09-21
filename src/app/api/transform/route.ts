@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 import { getAnonymousOwner } from "@/server/auth/anonymousOwner";
-import { createMagicHourVideoToVideo } from "@/server/clients/magicHourClient";
+import {
+  createMagicHourVideoToVideo,
+  getMagicHourErrorDetails,
+} from "@/server/clients/magicHourClient";
 import { getMagicHourApiEnv } from "@/server/config/env";
 import {
   claimForSubmission,
@@ -207,7 +210,12 @@ export async function POST(request: NextRequest) {
         videoSource: "file",
       },
     });
-  } catch {
+  } catch (providerError) {
+    console.error(
+      "Magic Hour video-to-video submission failed.",
+      await getMagicHourErrorDetails(providerError),
+    );
+
     try {
       await markFailed(claimedTransformation._id, {
         stage: "submission",

@@ -7,6 +7,7 @@ import type {
   TransformationFormProps,
   TransformationFormValues,
 } from "@/components/TransformationForm/TransformationForm.types";
+import { transformationHistoryRefreshEvent } from "@/shared/browserEvents";
 import {
   videoToVideoArtStyles,
   videoToVideoModels,
@@ -165,6 +166,7 @@ export default function TransformationForm({ transformationId }: TransformationF
       }
 
       setIsQueued(true);
+      window.dispatchEvent(new Event(transformationHistoryRefreshEvent));
     } catch (submissionError) {
       setError(
         submissionError instanceof Error

@@ -217,21 +217,14 @@ function TransformationProgress({
           {statusLabels[status]}
         </span>
       </div>
-      <ol className="mt-4 flex items-center sm:hidden" aria-label="Transformation steps">
+      <ol className="mt-4 grid grid-cols-3 gap-x-3 gap-y-3 sm:hidden" aria-label="Transformation steps">
         {progressSteps.map((step, index) => {
           const isCurrentStep = index === currentStepIndex && !isCompleted && !isFailed;
           const isCompletedStep = index < currentStepIndex || isCompleted;
           const isFailedStep = isFailed && index === currentStepIndex;
-          const isCompletedConnector = index <= currentStepIndex && !isFailed;
 
           return (
-            <li key={step.label} className="flex min-w-0 flex-1 items-center last:flex-none">
-              {index > 0 && (
-                <span
-                  className={`h-px flex-1 ${isCompletedConnector ? "bg-emerald-400/70" : "bg-slate-200"}`}
-                  aria-hidden="true"
-                />
-              )}
+            <li key={step.label} className="flex justify-center">
               <span className={`relative flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ring-4 ring-[#2b2142] ${isFailedStep ? "bg-rose-500 text-white" : isCompletedStep ? "bg-emerald-500 text-white" : isCurrentStep ? "bg-violet-600 text-white" : "bg-slate-200 text-slate-500"}`}>
                 {isCompletedStep ? "✓" : index + 1}
               </span>

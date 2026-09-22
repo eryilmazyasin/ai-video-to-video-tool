@@ -4,6 +4,7 @@ import { getMagicHourApiEnv } from "@/server/config/env";
 import { Client } from "magic-hour";
 
 import type {
+  MagicHourAccountSummary,
   MagicHourImageToImageRequest,
   MagicHourImageToImageResponse,
 } from "@/server/clients/magicHourClient.types";
@@ -29,6 +30,20 @@ export function createMagicHourImageToImage(
   request: MagicHourImageToImageRequest,
 ): Promise<MagicHourImageToImageResponse> {
   return getMagicHourClient().v1.aiImageEditor.create(request);
+}
+
+export async function getMagicHourAccountSummary(): Promise<MagicHourAccountSummary | null> {
+  try {
+    const account = await getMagicHourClient().v1.account.list();
+
+    return {
+      accountIdSuffix: account.id.slice(-6),
+      credits: account.credits,
+      tier: account.tier,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function getSafeProviderField(value: unknown) {

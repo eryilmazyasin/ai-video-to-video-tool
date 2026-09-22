@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 import { getAnonymousOwner } from "@/server/auth/anonymousOwner";
-import { createMagicHourImageToImage, getMagicHourErrorDetails } from "@/server/clients/magicHourClient";
+import {
+  createMagicHourImageToImage,
+  getMagicHourAccountSummary,
+  getMagicHourErrorDetails,
+} from "@/server/clients/magicHourClient";
 import { getMagicHourApiEnv } from "@/server/config/env";
 import { claimForSubmission, findByIdForOwner, markFailed, markQueued } from "@/server/db-actions/transformationActions";
 import type { TransformationRequest } from "@/server/types/transformation.types";
@@ -88,7 +92,13 @@ export async function POST(request: NextRequest) {
     providerResponse = await createMagicHourImageToImage({ ...submissionRequest, assets: { imageFilePaths: [inputFilePath] } });
   } catch (providerError) {
     const providerDetails = await getMagicHourErrorDetails(providerError);
-    console.error("Magic Hour image-to-image submission failed.", providerDetails);
+    const accountSummary = providerDetails.status === 402
+      ? await getMagicHourAccountSummary()
+      : null;
+    console.error("Magic Hour image-to-image submission failed.", {
+      ...providerDetails,
+      ...(accountSummary ? { account: accountSummary } : {}),
+    });
     const errorMessage = providerDetails.status === 402
       ? "Not enough Magic Hour credits for these image settings."
       : providerDetails.status === 422 || providerDetails.status === 400

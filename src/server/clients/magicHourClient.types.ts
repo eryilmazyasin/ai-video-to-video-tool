@@ -5,3 +5,9 @@ import type {
 
 export type MagicHourImageToImageRequest = V1AiImageEditorCreateBody;
 export type MagicHourImageToImageResponse = V1AiImageEditorCreateResponse;
+
+export interface MagicHourAccountSummary {
+  accountIdSuffix: string;
+  credits: number;
+  tier: "business" | "creator" | "free" | "pro";
+}

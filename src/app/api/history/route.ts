@@ -1,15 +1,72 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getExistingAnonymousOwner } from "@/server/auth/anonymousOwner";
-import { listRecentForOwner } from "@/server/db-actions/transformationActions";
+import { getMagicHourImageProject } from "@/server/clients/magicHourClient";
+import {
+  listRecentForOwner,
+  markProcessingByProviderJobId,
+  markProviderErrored,
+} from "@/server/db-actions/transformationActions";
 import type {
   TransformationDocument,
   TransformationError,
 } from "@/server/types/transformation.types";
+import { completeMagicHourImage } from "@/server/webhooks/magicHourImageCompletion";
 
 export const runtime = "nodejs";
 
 const historyLimit = 12;
+const synchronizableStatuses = new Set(["queued", "processing", "saving_output"]);
+
+function hasOnlyHttpsDownloads(downloads: Array<{ url: string }>) {
+  try {
+    return downloads.every((download) => new URL(download.url).protocol === "https:");
+  } catch {
+    return false;
+  }
+}
+
+async function reconcileTransformation(transformation: TransformationDocument) {
+  if (
+    !synchronizableStatuses.has(transformation.status) ||
+    !transformation.provider.jobId
+  ) {
+    return;
+  }
+
+  try {
+    const project = await getMagicHourImageProject(transformation.provider.jobId);
+
+    if (project.status === "rendering") {
+      await markProcessingByProviderJobId(project.id, project.status);
+      return;
+    }
+
+    if (project.status === "error") {
+      await markProviderErrored(project.id, project.status);
+      return;
+    }
+
+    if (project.status === "complete" && hasOnlyHttpsDownloads(project.downloads)) {
+      await completeMagicHourImage({
+        providerJobId: project.id,
+        rawStatus: project.status,
+        downloads: project.downloads.map((download) => ({ url: download.url })),
+        creditsCharged: project.creditsCharged,
+      });
+    }
+  } catch (error) {
+    // Webhooks remain the primary path; a polling failure must not break history.
+    console.error("Magic Hour image reconciliation failed.", {
+      transformationId: transformation._id?.toHexString(),
+      message: error instanceof Error ? error.message.slice(0, 300) : "Unknown error",
+    });
+  }
+}
+
+async function reconcileActiveTransformations(transformations: TransformationDocument[]) {
+  await Promise.all(transformations.map(reconcileTransformation));
+}
 
 function getSafeError(error: TransformationError) {
   const safeMessages: Record<string, string> = {
@@ -73,6 +130,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const initialTransformations = await listRecentForOwner(ownerId, historyLimit);
+
+    // Reconcile active projects so a missed provider webhook is recoverable after refresh.
+    await reconcileActiveTransformations(initialTransformations);
     const transformations = await listRecentForOwner(ownerId, historyLimit);
 
     return NextResponse.json({

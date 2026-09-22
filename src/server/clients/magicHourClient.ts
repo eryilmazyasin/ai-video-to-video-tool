@@ -5,6 +5,7 @@ import { Client } from "magic-hour";
 
 import type {
   MagicHourAccountSummary,
+  MagicHourImageProject,
   MagicHourImageToImageRequest,
   MagicHourImageToImageResponse,
 } from "@/server/clients/magicHourClient.types";
@@ -30,6 +31,12 @@ export function createMagicHourImageToImage(
   request: MagicHourImageToImageRequest,
 ): Promise<MagicHourImageToImageResponse> {
   return getMagicHourClient().v1.aiImageEditor.create(request);
+}
+
+export function getMagicHourImageProject(
+  projectId: string,
+): Promise<MagicHourImageProject> {
+  return getMagicHourClient().v1.imageProjects.get({ id: projectId });
 }
 
 export async function getMagicHourAccountSummary(): Promise<MagicHourAccountSummary | null> {

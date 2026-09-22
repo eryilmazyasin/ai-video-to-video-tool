@@ -5,12 +5,14 @@ import { v2 as cloudinary } from "cloudinary";
 
 import type {
   CloudinaryImageUpload,
+  UploadImageBufferInput,
   UploadImageFromUrlInput,
   UploadOutputImageFromUrlInput,
   UploadSourceImageFromUrlInput,
 } from "@/server/clients/cloudinaryClient.types";
 
 const publicIdSegmentPattern = /^[A-Za-z0-9_-]{1,128}$/;
+const maximumSourceImageBytes = 20 * 1024 * 1024;
 
 declare global {
   var cloudinaryIsConfigured: boolean | undefined;
@@ -128,17 +130,78 @@ async function uploadImageFromUrl(
   return normalizeUploadResponse(response);
 }
 
-export function uploadSourceImageFromUrl(
+async function downloadSourceImage(sourceUrl: string) {
+  let response: Response;
+
+  try {
+    response = await fetch(sourceUrl);
+  } catch {
+    throw new Error("The source image could not be downloaded.");
+  }
+
+  if (!response.ok) {
+    throw new Error("The source image download failed.");
+  }
+
+  const declaredSize = Number(response.headers.get("content-length"));
+
+  if (Number.isFinite(declaredSize) && declaredSize > maximumSourceImageBytes) {
+    throw new Error("The source image is too large.");
+  }
+
+  const sourceBytes = Buffer.from(await response.arrayBuffer());
+
+  if (sourceBytes.byteLength > maximumSourceImageBytes) {
+    throw new Error("The source image is too large.");
+  }
+
+  return sourceBytes;
+}
+
+async function uploadImageBuffer(
+  input: UploadImageBufferInput,
+): Promise<CloudinaryImageUpload> {
+  const response = await new Promise<unknown>((resolve, reject) => {
+    const uploadStream = getCloudinaryClient().uploader.upload_stream(
+      {
+        resource_type: "image",
+        public_id: input.publicId,
+        overwrite: input.overwrite ?? false,
+      },
+      (error, result) => {
+        if (error || !result) {
+          reject(error ?? new Error("Cloudinary did not return an upload response."));
+          return;
+        }
+
+        resolve(result);
+      },
+    );
+
+    uploadStream.end(input.sourceBytes);
+  }).catch(() => {
+    // Do not expose provider details because they can include signed URLs.
+    throw new Error("Cloudinary could not upload the image. Please try again.");
+  });
+
+  return normalizeUploadResponse(response);
+}
+
+export async function uploadSourceImageFromUrl(
   input: UploadSourceImageFromUrlInput,
 ): Promise<CloudinaryImageUpload> {
   const uploadcareUuid = validatePublicIdSegment(
     input.uploadcareUuid,
     "Uploadcare UUID",
   );
+  // Uploadcare verifies the source first; streaming the bytes avoids remote-fetch restrictions in Cloudinary.
+  const sourceBytes = await downloadSourceImage(input.sourceUrl);
 
-  return uploadImageFromUrl({
-    sourceUrl: input.sourceUrl,
+  return uploadImageBuffer({
+    sourceBytes,
     publicId: `ai-image-to-image/sources/${uploadcareUuid}`,
+    // A repeated preparation request for the same Uploadcare file must be recoverable.
+    overwrite: true,
   });
 }
 

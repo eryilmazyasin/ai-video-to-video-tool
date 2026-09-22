@@ -7,14 +7,50 @@ import TransformationHistory from "@/components/TransformationHistory/Transforma
 import type { TransformationHistoryItem } from "@/components/TransformationHistory/TransformationHistory.types";
 import ImageUploader from "@/components/ImageUploader/ImageUploader";
 
+function getWorkspaceLocation() {
+  if (typeof window === "undefined") {
+    return { isCreatingNew: false, transformationId: null };
+  }
+
+  const searchParams = new URLSearchParams(window.location.search);
+
+  return {
+    isCreatingNew: searchParams.get("view") === "new",
+    transformationId: searchParams.get("project"),
+  };
+}
+
+function updateWorkspaceLocation(
+  transformationId: string | null,
+  isCreatingNew: boolean,
+) {
+  const url = new URL(window.location.href);
+
+  if (transformationId) {
+    url.searchParams.set("project", transformationId);
+    url.searchParams.delete("view");
+  } else if (isCreatingNew) {
+    url.searchParams.set("view", "new");
+    url.searchParams.delete("project");
+  } else {
+    url.searchParams.delete("project");
+    url.searchParams.delete("view");
+  }
+
+  window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+}
+
 export default function Home() {
   const [selectedTransformation, setSelectedTransformation] = useState<TransformationHistoryItem | null>(null);
   const [pendingTransformationId, setPendingTransformationId] = useState<string | null>(null);
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [isCreatingNew, setIsCreatingNew] = useState(() => getWorkspaceLocation().isCreatingNew);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const historyDrawerRef = useRef<HTMLElement>(null);
   const drawerCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const requestedTransformationIdRef = useRef<string | null>(
+    getWorkspaceLocation().transformationId,
+  );
 
   useEffect(() => {
     if (!isHistoryDrawerOpen) {
@@ -68,9 +104,11 @@ export default function Home() {
   }, [isHistoryDrawerOpen]);
 
   const handleSelectTransformation = useCallback((transformation: TransformationHistoryItem) => {
+    requestedTransformationIdRef.current = transformation.id;
     setSelectedTransformation(transformation);
     setIsCreatingNew(false);
     setIsHistoryDrawerOpen(false);
+    updateWorkspaceLocation(transformation.id, false);
   }, []);
   const handleTransformationsChange = useCallback((transformations: TransformationHistoryItem[]) => {
     const queuedTransformation = pendingTransformationId
@@ -78,8 +116,21 @@ export default function Home() {
       : null;
 
     if (queuedTransformation) {
+      requestedTransformationIdRef.current = queuedTransformation.id;
       setSelectedTransformation(queuedTransformation);
       setPendingTransformationId(null);
+      updateWorkspaceLocation(queuedTransformation.id, false);
+      return;
+    }
+
+    const requestedTransformationId = requestedTransformationIdRef.current;
+    const requestedTransformation = requestedTransformationId
+      ? transformations.find((transformation) => transformation.id === requestedTransformationId)
+      : null;
+
+    if (requestedTransformation) {
+      setSelectedTransformation(requestedTransformation);
+      setIsCreatingNew(false);
       return;
     }
 
@@ -92,13 +143,17 @@ export default function Home() {
     });
   }, [pendingTransformationId]);
   const handleTransformationQueued = useCallback((transformationId: string) => {
+    requestedTransformationIdRef.current = transformationId;
     setPendingTransformationId(transformationId);
     setIsCreatingNew(false);
+    updateWorkspaceLocation(transformationId, false);
   }, []);
   const handleStartNewTransformation = useCallback(() => {
+    requestedTransformationIdRef.current = null;
     setSelectedTransformation(null);
     setIsCreatingNew(true);
     setIsHistoryDrawerOpen(false);
+    updateWorkspaceLocation(null, true);
   }, []);
 
   return (

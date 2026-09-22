@@ -21,3 +21,9 @@ export interface UploadImageFromUrlInput {
   publicId: string;
   overwrite?: boolean;
 }
+
+export interface UploadImageBufferInput {
+  sourceBytes: Buffer;
+  publicId: string;
+  overwrite?: boolean;
+}

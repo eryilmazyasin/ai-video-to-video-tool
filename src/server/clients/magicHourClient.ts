@@ -1,8 +1,8 @@
 import "server-only";
 
+import { getMagicHourApiEnv } from "@/server/config/env";
 import { Client } from "magic-hour";
 
-import { getMagicHourApiEnv } from "@/server/config/env";
 import type {
   MagicHourImageToImageRequest,
   MagicHourImageToImageResponse,
@@ -10,14 +10,16 @@ import type {
 
 declare global {
   var magicHourClient: Client | undefined;
+  var magicHourClientApiKey: string | undefined;
 }
 
 function getMagicHourClient() {
-  if (!globalThis.magicHourClient) {
-    const { apiKey } = getMagicHourApiEnv();
+  const { apiKey } = getMagicHourApiEnv();
 
-    // Configure on first use so routes that do not use Magic Hour do not require its env values.
+  if (!globalThis.magicHourClient || globalThis.magicHourClientApiKey !== apiKey) {
+    // Recreate the client when a server process receives a rotated API key.
     globalThis.magicHourClient = new Client({ token: apiKey, lazyLoad: true });
+    globalThis.magicHourClientApiKey = apiKey;
   }
 
   return globalThis.magicHourClient;

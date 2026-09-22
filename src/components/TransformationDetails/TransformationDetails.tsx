@@ -198,7 +198,7 @@ export default function TransformationDetails({
         )}
 
         {transformation.error && (
-          <div className="border-b border-rose-100 bg-rose-50/70 px-5 py-4 sm:px-6" role="alert">
+          <div className="border-b border-rose-500/25 bg-rose-50/70 px-5 py-4 sm:px-6" role="alert">
             <div className="flex items-start gap-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-sm font-semibold text-rose-700">!</span>
               <div>

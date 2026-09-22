@@ -83,20 +83,25 @@ function VideoPanel({
   fileName,
   fileMeta,
   isLoading = false,
+  isGenerated = false,
 }: TransformationVideoPanelProps) {
   return (
-    <article className="flex min-w-0 flex-col rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-      <header>
-        <h2 className="text-sm font-semibold text-slate-950">{label}</h2>
-        <p className="mt-1.5 text-xs text-slate-400">{description}</p>
+    <article className={`relative flex min-w-0 flex-col rounded-xl border p-4 ${isGenerated ? "overflow-hidden border-violet-400/50 bg-[radial-gradient(circle_at_78%_0%,rgba(168,85,247,0.2),transparent_38%),linear-gradient(145deg,rgba(36,23,70,0.95),rgba(18,18,32,0.98))] shadow-[0_16px_36px_rgb(76_29_149_/_24%)]" : "border-slate-200 bg-slate-50/60"}`}>
+      {isGenerated && <span className="pointer-events-none absolute -right-8 -top-8 size-32 rounded-full bg-fuchsia-500/15 blur-3xl" aria-hidden="true" />}
+      <header className="relative z-10 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-950">{label}</h2>
+          <p className="mt-1.5 text-xs text-slate-400">{description}</p>
+        </div>
+        {isGenerated && <span className="rounded-full border border-violet-300/40 bg-violet-500/15 px-2 py-1 text-[10px] font-semibold tracking-[0.1em] text-violet-200 uppercase">AI output</span>}
       </header>
 
       {url ? (
-        <video className="mt-4 aspect-video w-full rounded-lg bg-slate-950 object-contain shadow-sm" controls preload="metadata" src={url} aria-label={`${label} preview`}>
+        <video className={`relative z-10 mt-4 aspect-video w-full rounded-lg bg-slate-950 object-contain shadow-sm ${isGenerated ? "ring-1 ring-violet-300/30 shadow-[0_12px_28px_rgb(0_0_0_/_34%)]" : ""}`} controls preload="metadata" src={url} aria-label={`${label} preview`}>
           Your browser does not support video preview.
         </video>
       ) : (
-        <div className="mt-4 flex aspect-video min-h-52 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white p-5 text-center">
+        <div className="relative z-10 mt-4 flex aspect-video min-h-52 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white p-5 text-center">
           <div className="max-w-xs">
             <span className="mx-auto flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-violet-100">
               {isLoading ? (
@@ -111,7 +116,7 @@ function VideoPanel({
         </div>
       )}
 
-      <footer className="mt-4 flex min-w-0 items-end justify-between gap-3">
+      <footer className="relative z-10 mt-4 flex min-w-0 items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-slate-700" title={fileName}>{fileName}</p>
           <p className="mt-1 text-xs text-slate-400">{fileMeta}</p>
@@ -214,7 +219,7 @@ export default function TransformationDetails({
           </div>
         )}
 
-        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-2">
+        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
           <VideoPanel
             label="Generated video"
             description="AI-transformed result"
@@ -225,6 +230,7 @@ export default function TransformationDetails({
             fileName={request?.name || "Generated result"}
             fileMeta={isCompleted ? `Completed ${formatDate(transformation.completedAt ?? transformation.updatedAt)}` : statusLabels[transformation.status]}
             isLoading={isActive}
+            isGenerated
           />
           <VideoPanel
             label="Source video"
@@ -245,16 +251,16 @@ export default function TransformationDetails({
                 <h2 className="text-sm font-semibold text-slate-950">Transformation settings</h2>
                 <p className="mt-1.5 text-xs text-slate-400">Configuration used for this generation.</p>
               </div>
-              {transformation.creditsCharged !== null && <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-500 ring-1 ring-slate-200">{transformation.creditsCharged} credits</span>}
+              {transformation.creditsCharged !== null && <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-500">{transformation.creditsCharged} credits</span>}
             </div>
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200/80"><dt className="text-xs text-slate-400">Clip</dt><dd className="mt-1.5 font-medium text-slate-700">{formatClip(request.startSeconds, request.endSeconds)}</dd></div>
-              <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200/80"><dt className="text-xs text-slate-400">Visual style</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.artStyle}</dd></div>
-              <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200/80"><dt className="text-xs text-slate-400">Frame rate</dt><dd className="mt-1.5 font-medium text-slate-700">{request.fpsResolution === "HALF" ? "Half" : request.fpsResolution === "FULL" ? "Full" : "Not specified"}</dd></div>
-              <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200/80"><dt className="text-xs text-slate-400">Model</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.model ?? "Provider default"}</dd></div>
-              <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200/80"><dt className="text-xs text-slate-400">Version</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.version?.toUpperCase() ?? "Provider default"}</dd></div>
-              <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200/80"><dt className="text-xs text-slate-400">Prompt mode</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.promptType?.replaceAll("_", " ") ?? "Default"}</dd></div>
-              {request.style.prompt && <div className="rounded-lg bg-white p-3 ring-1 ring-slate-200/80 sm:col-span-2 lg:col-span-3"><dt className="text-xs text-slate-400">Creative prompt</dt><dd className="mt-1.5 leading-6 text-slate-600">{request.style.prompt}</dd></div>}
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Clip</dt><dd className="mt-1.5 font-medium text-slate-700">{formatClip(request.startSeconds, request.endSeconds)}</dd></div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Visual style</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.artStyle}</dd></div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Frame rate</dt><dd className="mt-1.5 font-medium text-slate-700">{request.fpsResolution === "HALF" ? "Half" : request.fpsResolution === "FULL" ? "Full" : "Not specified"}</dd></div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Model</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.model ?? "Provider default"}</dd></div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Version</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.version?.toUpperCase() ?? "Provider default"}</dd></div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Prompt mode</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.promptType?.replaceAll("_", " ") ?? "Default"}</dd></div>
+              {request.style.prompt && <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 sm:col-span-2 lg:col-span-3"><dt className="text-xs text-slate-400">Creative prompt</dt><dd className="mt-1.5 leading-6 text-slate-600">{request.style.prompt}</dd></div>}
             </dl>
           </div>
         )}

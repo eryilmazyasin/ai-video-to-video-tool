@@ -14,4 +14,5 @@ export interface TransformationVideoPanelProps {
   fileName: string;
   fileMeta: string;
   isLoading?: boolean;
+  isGenerated?: boolean;
 }

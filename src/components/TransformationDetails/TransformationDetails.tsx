@@ -203,19 +203,47 @@ function TransformationProgress({
   const currentStepIndex = getProgressStepIndex(status, errorStage);
   const isCompleted = status === "completed";
   const isFailed = status === "failed";
+  const currentStep = progressSteps[currentStepIndex];
 
   return (
     <section className="border-b border-violet-100 bg-violet-50/70 px-5 py-5 sm:px-6" aria-labelledby="transformation-progress-title" aria-live="polite">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="transformation-progress-title" className="text-sm font-semibold text-slate-950">Transformation progress</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">This view updates automatically as the provider sends status updates.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500 sm:hidden">Live status from the AI service.</p>
+          <p className="mt-1 hidden text-xs leading-5 text-slate-500 sm:block">This view updates automatically as the provider sends status updates.</p>
         </div>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${isFailed ? "bg-rose-50 text-rose-700" : isCompleted ? "bg-emerald-50 text-emerald-700" : "bg-sky-50 text-sky-700"}`}>
           {statusLabels[status]}
         </span>
       </div>
-      <ol className="mt-5 grid gap-3 sm:grid-cols-5 sm:gap-2">
+      <ol className="mt-4 flex items-center sm:hidden" aria-label="Transformation steps">
+        {progressSteps.map((step, index) => {
+          const isCurrentStep = index === currentStepIndex && !isCompleted && !isFailed;
+          const isCompletedStep = index < currentStepIndex || isCompleted;
+          const isFailedStep = isFailed && index === currentStepIndex;
+          const isCompletedConnector = index <= currentStepIndex && !isFailed;
+
+          return (
+            <li key={step.label} className="flex min-w-0 flex-1 items-center last:flex-none">
+              {index > 0 && (
+                <span
+                  className={`h-px flex-1 ${isCompletedConnector ? "bg-emerald-400/70" : "bg-slate-200"}`}
+                  aria-hidden="true"
+                />
+              )}
+              <span className={`relative flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ring-4 ring-[#2b2142] ${isFailedStep ? "bg-rose-500 text-white" : isCompletedStep ? "bg-emerald-500 text-white" : isCurrentStep ? "bg-violet-600 text-white" : "bg-slate-200 text-slate-500"}`}>
+                {isCompletedStep ? "✓" : index + 1}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-3 text-xs sm:hidden">
+        <span className="font-semibold text-slate-900">{currentStep.label}</span>
+        <span className="text-slate-400"> · {currentStep.description}</span>
+      </p>
+      <ol className="mt-5 hidden gap-3 sm:grid sm:grid-cols-5 sm:gap-2">
         {progressSteps.map((step, index) => {
           const isCurrentStep = index === currentStepIndex && !isCompleted && !isFailed;
           const isCompletedStep = index < currentStepIndex || isCompleted;

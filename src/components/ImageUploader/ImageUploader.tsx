@@ -350,6 +350,7 @@ export default function ImageUploader({ onTransformationQueued }: ImageUploaderP
                 accept={imageAcceptTypes}
                 maxLocalFileSizeBytes={maximumImageSizeBytes}
                 sourceList="local"
+                qualityInsights={false}
                 className="uploadcare-dropzone uc-dark uc-radius-medium"
                 localeDefinitionOverride={{
                   en: {

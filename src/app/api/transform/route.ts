@@ -7,7 +7,13 @@ import {
   getMagicHourErrorDetails,
 } from "@/server/clients/magicHourClient";
 import { getMagicHourApiEnv } from "@/server/config/env";
-import { claimForSubmission, findByIdForOwner, markFailed, markQueued } from "@/server/db-actions/transformationActions";
+import {
+  claimForSubmission,
+  findByIdForOwner,
+  markFailed,
+  markQueued,
+  resetRetryableTransformation,
+} from "@/server/db-actions/transformationActions";
 import type { TransformationRequest } from "@/server/types/transformation.types";
 import { getImageToImageResolutions, imageToImageAspectRatios, imageToImageModels, imageToImageResolutions } from "@/shared/imageToImageOptions";
 
@@ -62,10 +68,42 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "The transformation could not be prepared. Please try again." }, { status: 500 });
   }
   if (!transformation) return NextResponse.json({ error: "The selected transformation was not found." }, { status: 404 });
-  if (transformation.status !== "ready") return NextResponse.json({ error: "The selected transformation has already been submitted." }, { status: 409 });
 
   try { getMagicHourApiEnv(); } catch {
     return NextResponse.json({ error: "The transformation service is temporarily unavailable. Please try again later." }, { status: 503 });
+  }
+
+  if (transformation.status !== "ready") {
+    const canResubmitWithNewSettings =
+      transformation.status === "failed" &&
+      transformation.error?.retryable === true &&
+      transformation.error.stage === "submission";
+
+    if (!canResubmitWithNewSettings) {
+      return NextResponse.json(
+        { error: "The selected transformation has already been submitted." },
+        { status: 409 },
+      );
+    }
+
+    try {
+      transformation = await resetRetryableTransformation(
+        transformation._id,
+        anonymousOwner.ownerId,
+      );
+    } catch {
+      return NextResponse.json(
+        { error: "The transformation could not be prepared for another attempt. Please try again." },
+        { status: 500 },
+      );
+    }
+
+    if (!transformation) {
+      return NextResponse.json(
+        { error: "This transformation cannot be resubmitted. Please start a new transformation." },
+        { status: 409 },
+      );
+    }
   }
 
   const submissionRequest = getSubmissionRequest(parsedInput.data);

@@ -519,11 +519,15 @@ button:disabled {
 
 .dark-app .ai-upload-scene .uploadcare-dropzone {
   position: absolute;
-  right: 0;
   bottom: 0;
   left: 0;
   z-index: 2;
-  height: 28px;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
   pointer-events: none;
 }
 
@@ -532,13 +536,5 @@ button:disabled {
 }
 
 .dark-app .ai-upload-scene .uploadcare-dropzone uc-copyright {
-  position: absolute;
-  right: 1rem;
-  bottom: 0.35rem;
-  justify-content: flex-end;
-}
-
-.dark-app .ai-upload-scene .uploadcare-dropzone uc-copyright .uc-credits {
-  margin: 0;
-  pointer-events: auto;
+  display: none !important;
 }

@@ -3,7 +3,7 @@
 import { FileUploaderMinimal } from "@uploadcare/react-uploader/next";
 import type { UploadCtxProvider } from "@uploadcare/file-uploader";
 import "@uploadcare/react-uploader/core.css";
-import { useCallback, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import Image from "next/image";
 
 import TransformationForm from "@/components/TransformationForm/TransformationForm";
@@ -11,6 +11,7 @@ import type {
   PreparedSourceImage,
   UploadApiResponse,
   UploadcareFailedEntry,
+  UploadcareIdleEntry,
   UploadcareSuccessEntry,
   UploadcareUploadingEntry,
   UploadStage,
@@ -66,6 +67,7 @@ export default function ImageUploader({ onTransformationQueued }: ImageUploaderP
   const completedUuidsRef = useRef(new Set<string>());
   const inFlightUuidRef = useRef<string | null>(null);
   const selectedUuidRef = useRef<string | null>(null);
+  const uploadPreviewUrlRef = useRef<string | null>(null);
   const [stage, setStage] = useState<UploadStage>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +77,24 @@ export default function ImageUploader({ onTransformationQueued }: ImageUploaderP
   const [sourceImage, setSourceImage] = useState<PreparedSourceImage | null>(null);
   const [transformationId, setTransformationId] = useState<string | null>(null);
   const [isDropSurfaceActive, setIsDropSurfaceActive] = useState(false);
+  const [uploadPreviewUrl, setUploadPreviewUrl] = useState<string | null>(null);
+  const [uploadFileName, setUploadFileName] = useState<string | null>(null);
+
+  const clearUploadPreview = useCallback(() => {
+    if (uploadPreviewUrlRef.current) {
+      URL.revokeObjectURL(uploadPreviewUrlRef.current);
+      uploadPreviewUrlRef.current = null;
+    }
+
+    setUploadPreviewUrl(null);
+    setUploadFileName(null);
+  }, []);
+
+  useEffect(() => () => {
+    if (uploadPreviewUrlRef.current) {
+      URL.revokeObjectURL(uploadPreviewUrlRef.current);
+    }
+  }, []);
 
   const prepareSourceImage = useCallback(async (entry: UploadcareSuccessEntry) => {
     const { uuid } = entry;
@@ -86,6 +106,7 @@ export default function ImageUploader({ onTransformationQueued }: ImageUploaderP
     // Keep each provider success event from starting duplicate preparation requests.
     inFlightUuidRef.current = uuid;
     selectedUuidRef.current = uuid;
+    clearUploadPreview();
     setStage("preparing");
     setError(null);
 
@@ -131,9 +152,10 @@ export default function ImageUploader({ onTransformationQueued }: ImageUploaderP
         inFlightUuidRef.current = null;
       }
     }
-  }, []);
+  }, [clearUploadPreview]);
 
-  const handleFileAdded = useCallback(() => {
+  const handleFileAdded = useCallback((entry: UploadcareIdleEntry) => {
+    clearUploadPreview();
     selectedUuidRef.current = null;
     setStage("idle");
     setProgress(0);
@@ -141,7 +163,15 @@ export default function ImageUploader({ onTransformationQueued }: ImageUploaderP
     setUploadedEntry(null);
     setSourceImage(null);
     setTransformationId(null);
-  }, []);
+
+    if (entry.file instanceof Blob) {
+      const previewUrl = URL.createObjectURL(entry.file);
+
+      uploadPreviewUrlRef.current = previewUrl;
+      setUploadPreviewUrl(previewUrl);
+      setUploadFileName(entry.name);
+    }
+  }, [clearUploadPreview]);
 
   const handleUploadStart = useCallback(() => {
     setStage("uploading");
@@ -163,9 +193,10 @@ export default function ImageUploader({ onTransformationQueued }: ImageUploaderP
   );
 
   const handleUploadFailed = useCallback((entry: UploadcareFailedEntry) => {
+    clearUploadPreview();
     setStage("error");
     setError(getUploadcareErrorMessage(entry));
-  }, []);
+  }, [clearUploadPreview]);
 
   const retryPreparation = useCallback(() => {
     if (uploadedEntry) {
@@ -177,6 +208,7 @@ export default function ImageUploader({ onTransformationQueued }: ImageUploaderP
     const uploaderApi = uploaderRef.current?.getAPI();
 
     uploaderApi?.removeAllFiles();
+    clearUploadPreview();
     selectedUuidRef.current = null;
     setStage("idle");
     setProgress(0);
@@ -186,7 +218,7 @@ export default function ImageUploader({ onTransformationQueued }: ImageUploaderP
     setTransformationId(null);
 
     window.setTimeout(() => uploaderApi?.openSystemDialog(), 0);
-  }, []);
+  }, [clearUploadPreview]);
 
   const openFileDialog = useCallback(() => {
     uploaderRef.current?.getAPI().openSystemDialog();
@@ -338,9 +370,23 @@ export default function ImageUploader({ onTransformationQueued }: ImageUploaderP
           {stage === "uploading" && (
             <div className="rounded-xl border border-violet-100 bg-violet-50/60 p-4" aria-live="polite">
               <div className="flex items-center justify-between gap-4 text-sm">
-                <div>
-                  <p className="font-semibold text-slate-900">Uploading securely</p>
-                  <p className="mt-1 text-xs text-slate-600">Keep this page open until the upload finishes.</p>
+                <div className="flex min-w-0 items-center gap-3">
+                  {uploadPreviewUrl && (
+                    <Image
+                      src={uploadPreviewUrl}
+                      alt=""
+                      width={44}
+                      height={44}
+                      unoptimized
+                      className="size-11 shrink-0 rounded-lg border border-violet-200 bg-white object-cover"
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900">Uploading securely</p>
+                    <p className="mt-1 truncate text-xs text-slate-600" title={uploadFileName ?? undefined}>
+                      {uploadFileName ?? "Keep this page open until the upload finishes."}
+                    </p>
+                  </div>
                 </div>
                 <span className="font-semibold tabular-nums text-violet-700">{progress}%</span>
               </div>

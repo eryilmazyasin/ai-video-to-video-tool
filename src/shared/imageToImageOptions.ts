@@ -26,7 +26,8 @@ export const imageToImageModelResolutions: Record<
   Exclude<(typeof imageToImageModels)[number], "default">,
   readonly (typeof imageToImageResolutions)[number][]
 > = {
-  "flux-2-klein": ["640px", "1k", "2k"],
+  // Magic Hour only enables 640px for this free-tier model configuration.
+  "flux-2-klein": ["640px"],
   "gpt-image-2": ["640px", "1k", "2k", "4k"],
   "gpt-image-2.5-flare": ["640px", "1k", "2k", "4k"],
   "krea-2": ["640px", "1k"],

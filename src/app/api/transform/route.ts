@@ -99,7 +99,10 @@ export async function POST(request: NextRequest) {
       ...providerDetails,
       ...(accountSummary ? { account: accountSummary } : {}),
     });
-    const errorMessage = providerDetails.status === 402
+    const planUpgradeRequired = providerDetails.providerCode === "plan_upgrade_required";
+    const errorMessage = planUpgradeRequired
+      ? "Your Magic Hour plan does not support these settings. Use a free-tier model at 640px or upgrade your plan."
+      : providerDetails.status === 402
       ? "Not enough Magic Hour credits for these image settings."
       : providerDetails.status === 422 || providerDetails.status === 400
         ? "Magic Hour rejected these settings. Try fewer results or a different model or resolution."
@@ -107,7 +110,7 @@ export async function POST(request: NextRequest) {
     try {
       await markFailed(claimedTransformation._id, {
         stage: "submission",
-        code: providerDetails.status === 402 ? "insufficient_credits" : providerDetails.status === 422 || providerDetails.status === 400 ? "invalid_image_settings" : "provider_submission_failed",
+        code: planUpgradeRequired ? "plan_upgrade_required" : providerDetails.status === 402 ? "insufficient_credits" : providerDetails.status === 422 || providerDetails.status === 400 ? "invalid_image_settings" : "provider_submission_failed",
         message: errorMessage,
         retryable: true,
       });

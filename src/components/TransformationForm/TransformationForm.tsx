@@ -17,7 +17,7 @@ const initialValues: TransformationFormValues = {
   name: "",
   prompt: "",
   model: "flux-2-klein",
-  resolution: "1k",
+  resolution: "640px",
   aspectRatio: "auto",
   imageCount: 1,
 };
@@ -145,7 +145,7 @@ export default function TransformationForm({ transformationId, onQueued }: Trans
             <CustomSelect id={`image-count-${transformationId}`} name="imageCount" value={String(values.imageCount)} options={imageCountOptions} onValueChange={(imageCount) => setValues({ ...values, imageCount: Number(imageCount) as TransformationFormValues["imageCount"] })} disabled={isDisabled} />
           </label>
         </div>
-        <p className="text-xs text-slate-500">Only one source image can be uploaded. More results use more credits; supported result counts can vary by model.</p>
+        <p className="text-xs text-slate-500">Free-tier models start at 640px. More results use more credits; supported result counts can vary by model.</p>
         {error && <p className="text-sm text-rose-700" role="alert">{error}</p>}
         <button
           className="ai-cta relative isolate flex min-h-13 w-full items-center justify-center gap-2.5 overflow-hidden rounded-xl border border-violet-300/45 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-[0_14px_34px_rgb(124_58_237_/_34%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 disabled:opacity-60"

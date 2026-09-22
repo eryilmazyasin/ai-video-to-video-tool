@@ -16,6 +16,7 @@ function getSafeError(error: TransformationError) {
     source_image_unavailable: "The stored source image is unavailable.",
     provider_submission_failed: "The transformation could not be submitted. Please try again.",
     insufficient_credits: "Not enough Magic Hour credits for these image settings.",
+    plan_upgrade_required: "Your Magic Hour plan does not support these settings. Use a free-tier model at 640px or upgrade your plan.",
     invalid_image_settings: "Magic Hour rejected these settings. Try fewer results or a different model or resolution.",
     provider_processing_failed: "The transformation could not be completed.",
     output_copy_failed: "The generated image could not be saved. Retrying automatically.",

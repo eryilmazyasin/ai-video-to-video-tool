@@ -44,6 +44,7 @@ export default function Home() {
   const [selectedTransformation, setSelectedTransformation] = useState<TransformationHistoryItem | null>(null);
   const [pendingTransformationId, setPendingTransformationId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(() => getWorkspaceLocation().isCreatingNew);
+  const [newTransformationKey, setNewTransformationKey] = useState(0);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const historyDrawerRef = useRef<HTMLElement>(null);
@@ -152,6 +153,7 @@ export default function Home() {
     requestedTransformationIdRef.current = null;
     setSelectedTransformation(null);
     setIsCreatingNew(true);
+    setNewTransformationKey((currentKey) => currentKey + 1);
     setIsHistoryDrawerOpen(false);
     updateWorkspaceLocation(null, true);
   }, []);
@@ -252,7 +254,7 @@ export default function Home() {
                   Upload a source image to create a new visual direction with AI.
                 </p>
               </section>
-              <ImageUploader onTransformationQueued={handleTransformationQueued} />
+              <ImageUploader key={newTransformationKey} onTransformationQueued={handleTransformationQueued} />
             </>
           )}
         </div>

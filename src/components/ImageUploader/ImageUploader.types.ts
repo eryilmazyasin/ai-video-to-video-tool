@@ -5,6 +5,7 @@ export type UploadStage = "idle" | "uploading" | "preparing" | "ready" | "error"
 export type UploadcareUploadingEntry = OutputFileEntry<"uploading">;
 export type UploadcareSuccessEntry = OutputFileEntry<"success">;
 export type UploadcareFailedEntry = OutputFileEntry<"failed">;
+export type UploadcareIdleEntry = OutputFileEntry<"idle">;
 
 export interface PreparedSourceImage {
   url: string;

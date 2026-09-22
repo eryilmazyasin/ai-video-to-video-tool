@@ -152,6 +152,22 @@ export default function TransformationHistory({
   const inFlightRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollEndTimeoutRef = useRef<number | null>(null);
+  const selectedTransformationIdRef = useRef(selectedTransformationId);
+  const isCreatingNewRef = useRef(isCreatingNew);
+  const onSelectTransformationRef = useRef(onSelectTransformation);
+  const onTransformationsChangeRef = useRef(onTransformationsChange);
+
+  useEffect(() => {
+    selectedTransformationIdRef.current = selectedTransformationId;
+    isCreatingNewRef.current = isCreatingNew;
+    onSelectTransformationRef.current = onSelectTransformation;
+    onTransformationsChangeRef.current = onTransformationsChange;
+  }, [
+    isCreatingNew,
+    onSelectTransformation,
+    onTransformationsChange,
+    selectedTransformationId,
+  ]);
 
   const handleHistoryListScroll = useCallback(() => {
     setIsHistoryListScrolling(true);
@@ -214,13 +230,13 @@ export default function TransformationHistory({
 
       if (isMountedRef.current) {
         setTransformations(body.transformations);
-        onTransformationsChange(body.transformations);
+        onTransformationsChangeRef.current(body.transformations);
         const selectedTransformation = body.transformations.find(
-          (item) => item.id === selectedTransformationId,
+          (item) => item.id === selectedTransformationIdRef.current,
         );
 
-        if (!isCreatingNew && !selectedTransformation && body.transformations[0]) {
-          onSelectTransformation(body.transformations[0]);
+        if (!isCreatingNewRef.current && !selectedTransformation && body.transformations[0]) {
+          onSelectTransformationRef.current(body.transformations[0]);
         }
         setError(null);
       }
@@ -251,7 +267,7 @@ export default function TransformationHistory({
         }
       }
     }
-  }, [isCreatingNew, onSelectTransformation, onTransformationsChange, selectedTransformationId]);
+  }, []);
 
   useEffect(() => {
     isMountedRef.current = true;

@@ -16,6 +16,7 @@ export interface TransformationImagePanelProps {
   linkLabel: string;
   fileName: string;
   fileMeta: string;
+  downloadUrl?: string;
   isLoading?: boolean;
   isGenerated?: boolean;
 }

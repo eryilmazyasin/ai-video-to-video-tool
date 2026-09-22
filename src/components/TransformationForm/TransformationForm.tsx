@@ -22,15 +22,9 @@ const initialValues: TransformationFormValues = {
   imageCount: 1,
 };
 
-const freeTierModels = new Set(["flux-2-klein", "krea-2", "qwen-edit"]);
-
 const modelOptions = imageToImageModels.map((model) => ({
   value: model,
-  label: model === "default"
-    ? "Provider default (plan-dependent)"
-    : freeTierModels.has(model)
-      ? `${model} · free-tier`
-      : model,
+  label: `${model} · free-tier`,
 })) satisfies readonly CustomSelectOption<TransformationFormValues["model"]>[];
 
 const aspectRatioOptions = imageToImageAspectRatios.map((aspectRatio) => ({

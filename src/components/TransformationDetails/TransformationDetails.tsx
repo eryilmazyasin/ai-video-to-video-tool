@@ -106,6 +106,7 @@ function ImagePanel({
   linkLabel,
   fileName,
   fileMeta,
+  downloadUrl,
   isLoading = false,
   isGenerated = false,
 }: TransformationImagePanelProps) {
@@ -121,7 +122,21 @@ function ImagePanel({
       </header>
 
       {url ? (
-        <div className={`relative z-10 mt-4 overflow-hidden rounded-lg bg-slate-950 ${isGenerated ? "min-h-72 sm:min-h-[32rem] ring-1 ring-violet-300/30 shadow-[0_12px_28px_rgb(0_0_0_/_34%)]" : "aspect-square"}`}><Image fill sizes="100vw" src={url} alt={`${label} preview`} className="object-contain" /></div>
+        <div className={`relative z-10 mt-4 overflow-hidden rounded-lg bg-slate-950 ${isGenerated ? "min-h-72 sm:min-h-[32rem] ring-1 ring-violet-300/30 shadow-[0_12px_28px_rgb(0_0_0_/_34%)]" : "aspect-square"}`}>
+          <Image fill sizes="100vw" src={url} alt={`${label} preview`} className="object-contain" />
+          {downloadUrl && (
+            <a
+              href={downloadUrl}
+              className="absolute right-3 top-3 inline-flex size-10 items-center justify-center rounded-xl border border-white/20 bg-slate-950/75 text-white shadow-lg backdrop-blur transition hover:bg-violet-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
+              aria-label={`Download ${label.toLowerCase()}`}
+              title="Download image"
+            >
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" className="size-5" aria-hidden="true">
+                <path d="M10 3v9m0 0 3.25-3.25M10 12 6.75 8.75M4.5 14.5v1a1.5 1.5 0 0 0 1.5 1.5h8a1.5 1.5 0 0 0 1.5-1.5v-1" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
+          )}
+        </div>
       ) : (
         <div className={`relative z-10 mt-4 flex items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white p-5 text-center ${isGenerated ? "min-h-72 sm:min-h-[32rem]" : "aspect-square min-h-52"}`}>
           <div className="max-w-xs">
@@ -207,7 +222,9 @@ function TransformationProgress({
           const isFailedStep = isFailed && index === currentStepIndex;
           const isCurrentConnector = index === currentStepIndex && !isCompleted && !isFailed;
           const isCompletedConnector = index < currentStepIndex || isCompleted;
-          const shouldAnimateConnector = isCurrentConnector || isCompletedConnector;
+          const shouldAnimateConnector = !isCompleted && !isFailed && (
+            isCurrentConnector || isCompletedConnector
+          );
 
           return (
             <li key={step.label} className="relative min-w-0 sm:pr-2">
@@ -376,6 +393,7 @@ export default function TransformationDetails({
                 linkLabel="Open result"
                 fileName={request?.name || `Generated result ${index + 1}`}
                 fileMeta={`Result ${index + 1} of ${transformation.outputs.length}`}
+                downloadUrl={`/api/download?transformationId=${encodeURIComponent(transformation.id)}&outputIndex=${index}`}
                 isGenerated
               />
                 ))}

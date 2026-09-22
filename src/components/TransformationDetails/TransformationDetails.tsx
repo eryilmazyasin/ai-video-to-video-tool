@@ -28,8 +28,8 @@ const statusClasses = {
   queued: "bg-amber-50 text-amber-700 ring-amber-200",
   processing: "bg-sky-50 text-sky-700 ring-sky-200",
   saving_output: "bg-sky-50 text-sky-700 ring-sky-200",
-  completed: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  failed: "bg-rose-50 text-rose-700 ring-rose-200",
+  completed: "bg-emerald-500/12 text-emerald-200 ring-emerald-300/50",
+  failed: "bg-rose-500/12 text-rose-200 ring-rose-300/50",
 } as const;
 
 const activeStatuses = new Set<TransformationHistoryStatus>([

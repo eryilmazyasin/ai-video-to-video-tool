@@ -21,6 +21,16 @@ export interface TransformationFormValues {
   version: VideoToVideoVersion;
 }
 
+export type TransformationFormField =
+  | "name"
+  | "startSeconds"
+  | "endSeconds"
+  | "prompt";
+
+export type TransformationFormErrors = Partial<
+  Record<TransformationFormField, string>
+>;
+
 export interface TransformationApiResponse {
   transformation: {
     id: string;

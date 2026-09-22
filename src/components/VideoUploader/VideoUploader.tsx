@@ -1,6 +1,7 @@
 "use client";
 
-import { FileUploaderRegular } from "@uploadcare/react-uploader/next";
+import { FileUploaderMinimal } from "@uploadcare/react-uploader/next";
+import type { UploadCtxProvider } from "@uploadcare/file-uploader";
 import "@uploadcare/react-uploader/core.css";
 import { useCallback, useRef, useState } from "react";
 
@@ -59,6 +60,7 @@ function isUploadApiResponse(value: unknown): value is UploadApiResponse {
 
 export default function VideoUploader() {
   const publicKey = process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY;
+  const uploaderRef = useRef<UploadCtxProvider>(null);
   const completedUuidsRef = useRef(new Set<string>());
   const inFlightUuidRef = useRef<string | null>(null);
   const selectedUuidRef = useRef<string | null>(null);
@@ -168,6 +170,21 @@ export default function VideoUploader() {
     }
   }, [prepareSourceVideo, uploadedEntry]);
 
+  const replaceSourceVideo = useCallback(() => {
+    const uploaderApi = uploaderRef.current?.getAPI();
+
+    uploaderApi?.removeAllFiles();
+    selectedUuidRef.current = null;
+    setStage("idle");
+    setProgress(0);
+    setError(null);
+    setUploadedEntry(null);
+    setSourceVideo(null);
+    setTransformationId(null);
+
+    window.setTimeout(() => uploaderApi?.openSystemDialog(), 0);
+  }, []);
+
   if (!publicKey) {
     return (
       <section
@@ -184,114 +201,185 @@ export default function VideoUploader() {
     );
   }
 
+  const isReady = stage === "ready" && sourceVideo;
+  const showUploader = stage === "idle" || (stage === "error" && !uploadedEntry);
+
   return (
-    <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-xl shadow-zinc-950/5 sm:p-8">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-violet-700">Source video</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-950">
-            Upload a video to begin
-          </h2>
-        </div>
-        <span className="w-fit rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
-          MP4 or MOV · up to 50 MB
-        </span>
-      </div>
-
-      <p className="mt-3 text-sm leading-6 text-zinc-600">
-        Your video uploads directly to Uploadcare, then is copied to secure storage for the next transformation step.
-      </p>
-
-      <div className="mt-6 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-3 sm:p-4">
-        <FileUploaderRegular
-          pubkey={publicKey}
-          multiple={false}
-          multipleMax={1}
-          accept={videoAcceptTypes}
-          maxLocalFileSizeBytes={maximumVideoSizeBytes}
-          sourceList="local"
-          className="block"
-          onFileAdded={handleFileAdded}
-          onFileUploadStart={handleUploadStart}
-          onFileUploadProgress={handleUploadProgress}
-          onFileUploadSuccess={handleUploadSuccess}
-          onFileUploadFailed={handleUploadFailed}
-        />
-      </div>
-
-      {stage === "uploading" && (
-        <div className="mt-5" aria-live="polite">
-          <div className="flex items-center justify-between text-sm font-medium text-zinc-800">
-            <span>Uploading to Uploadcare</span>
-            <span>{progress}%</span>
+    <>
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60" aria-labelledby="source-video-title">
+        <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+          <div className="flex items-start gap-3">
+            <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold ${isReady ? "bg-emerald-100 text-emerald-700" : "bg-violet-100 text-violet-700"}`}>
+              {isReady ? (
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-4" aria-hidden="true">
+                  <path d="m5.5 10 3 3 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ) : "1"}
+            </span>
+            <div>
+              <p className="text-xs font-semibold tracking-[0.12em] text-violet-700 uppercase">
+                Step 1 · Source video
+              </p>
+              <h2 id="source-video-title" className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
+                {isReady ? "Source ready" : "Add your source video"}
+              </h2>
+              <p className="mt-1 max-w-xl text-sm leading-6 text-slate-600">
+                {isReady
+                  ? "Review the selected video, then configure its new visual direction."
+                  : "Choose the video you want to transform. We’ll prepare a secure copy before generation."}
+              </p>
+            </div>
           </div>
-          <div
-            className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-200"
-            role="progressbar"
-            aria-label="Uploadcare upload progress"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={progress}
-          >
-            <div className="h-full rounded-full bg-violet-600 transition-[width]" style={{ width: `${progress}%` }} />
-          </div>
+          <span className="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+            MP4 or MOV · Max 50 MB
+          </span>
         </div>
-      )}
 
-      {stage === "preparing" && (
-        <p className="mt-5 flex items-center gap-2 text-sm font-medium text-zinc-800" role="status">
-          <span className="size-2 animate-pulse rounded-full bg-violet-600" aria-hidden="true" />
-          Upload complete. Preparing your video in secure storage…
-        </p>
-      )}
+        <div className="min-h-52 p-5 sm:p-6">
+          <div className={showUploader ? "block" : "hidden"}>
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-3 text-center transition hover:border-violet-300 hover:bg-violet-50/30 sm:p-5">
+              <span className="mx-auto flex size-11 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm ring-1 ring-slate-200">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" className="size-5" aria-hidden="true">
+                  <path d="M10 13V4m0 0L6.75 7.25M10 4l3.25 3.25M4 12.5v2A1.5 1.5 0 0 0 5.5 16h9a1.5 1.5 0 0 0 1.5-1.5v-2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <p className="mt-3 text-sm font-semibold text-slate-900">Drop a video here or choose from your device</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Short clips process faster and use fewer generation credits.</p>
+              <FileUploaderMinimal
+                apiRef={uploaderRef}
+                pubkey={publicKey}
+                multiple={false}
+                multipleMax={1}
+                accept={videoAcceptTypes}
+                maxLocalFileSizeBytes={maximumVideoSizeBytes}
+                sourceList="local"
+                className="uploadcare-dropzone uc-light uc-radius-medium mt-3 block min-h-12"
+                localeDefinitionOverride={{
+                  en: {
+                    "choose-file": "Choose video",
+                    "drop-file-here": "Drop your video here",
+                    "drop-files-here": "Drop your videos here",
+                  },
+                }}
+                onFileAdded={handleFileAdded}
+                onFileUploadStart={handleUploadStart}
+                onFileUploadProgress={handleUploadProgress}
+                onFileUploadSuccess={handleUploadSuccess}
+                onFileUploadFailed={handleUploadFailed}
+              />
+            </div>
+          </div>
 
-      {stage === "error" && (
-        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4" role="alert">
-          <p className="text-sm font-medium text-red-800">{error}</p>
-          {uploadedEntry && (
-            <button
-              type="button"
-              onClick={retryPreparation}
-              className="mt-3 rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
-            >
-              Retry preparation
-            </button>
+          {stage === "uploading" && (
+            <div className="rounded-xl border border-violet-100 bg-violet-50/60 p-4" aria-live="polite">
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <div>
+                  <p className="font-semibold text-slate-900">Uploading securely</p>
+                  <p className="mt-1 text-xs text-slate-600">Keep this page open until the upload finishes.</p>
+                </div>
+                <span className="font-semibold tabular-nums text-violet-700">{progress}%</span>
+              </div>
+              <div
+                className="mt-3 h-2 overflow-hidden rounded-full bg-violet-100"
+                role="progressbar"
+                aria-label="Uploadcare upload progress"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={progress}
+              >
+                <div className="h-full rounded-full bg-violet-600 transition-[width]" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          )}
+
+          {stage === "preparing" && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4" role="status" aria-live="polite">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true">
+                    <path d="M16 10a6 6 0 1 1-1.75-4.25" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Preparing your source</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">Upload complete. We’re copying the file to secure storage for transformation.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {stage === "error" && (
+            <div className={`${showUploader ? "mt-4" : ""} rounded-xl border border-rose-200 bg-rose-50 p-4`} role="alert">
+              <div className="flex items-start gap-3">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700">!</span>
+                <div>
+                  <p className="text-sm font-semibold text-rose-950">We couldn’t prepare this video</p>
+                  <p className="mt-1 text-sm leading-6 text-rose-800">{error}</p>
+                  {uploadedEntry && (
+                    <button
+                      type="button"
+                      onClick={retryPreparation}
+                      className="mt-3 rounded-lg bg-rose-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"
+                    >
+                      Try preparation again
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isReady && (
+            <div className="grid grid-cols-[minmax(0,8rem)_1fr] gap-4 sm:grid-cols-[minmax(0,15rem)_1fr] sm:gap-5" aria-live="polite">
+              <video
+                className="aspect-video w-full rounded-xl bg-slate-950 object-contain shadow-sm"
+                controls
+                preload="metadata"
+                src={sourceVideo.url}
+                aria-label={`Source video: ${sourceVideo.originalName}`}
+              >
+                Your browser does not support video preview.
+              </video>
+              <div className="flex min-w-0 flex-col justify-center">
+                <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                  <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                  Ready to configure
+                </span>
+                <p className="mt-3 truncate text-base font-semibold text-slate-950" title={sourceVideo.originalName}>
+                  {sourceVideo.originalName}
+                </p>
+                <dl className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                  <div className="rounded-lg bg-slate-100 px-2.5 py-1.5">
+                    <dt className="sr-only">Format</dt>
+                    <dd>{sourceVideo.mimeType === "video/quicktime" ? "MOV" : "MP4"}</dd>
+                  </div>
+                  <div className="rounded-lg bg-slate-100 px-2.5 py-1.5">
+                    <dt className="sr-only">File size</dt>
+                    <dd>{formatFileSize(sourceVideo.bytes)}</dd>
+                  </div>
+                </dl>
+                <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-500">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden="true">
+                    <path d="M6.5 9V6.75a3.5 3.5 0 0 1 7 0V9M5.5 9h9a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1Z" strokeLinecap="round" />
+                  </svg>
+                  Stored securely and ready to send to the transformation service.
+                </p>
+                <button
+                  type="button"
+                  onClick={replaceSourceVideo}
+                  className="mt-4 w-fit rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+                >
+                  Replace video
+                </button>
+              </div>
+            </div>
           )}
         </div>
-      )}
+      </section>
 
-      {stage === "ready" && sourceVideo && (
-        <>
-          <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4" aria-live="polite">
-            <p className="text-sm font-semibold text-emerald-900">Video ready for transformation</p>
-            <video
-              className="mt-4 aspect-video w-full rounded-xl bg-zinc-950 object-contain"
-              controls
-              preload="metadata"
-              src={sourceVideo.url}
-            >
-              Your browser does not support video preview.
-            </video>
-            <dl className="mt-4 grid gap-3 text-sm text-emerald-950 sm:grid-cols-3">
-              <div>
-                <dt className="text-emerald-800">File</dt>
-                <dd className="mt-1 truncate font-medium" title={sourceVideo.originalName}>
-                  {sourceVideo.originalName}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-emerald-800">Format</dt>
-                <dd className="mt-1 font-medium">{sourceVideo.mimeType}</dd>
-              </div>
-              <div>
-                <dt className="text-emerald-800">Size</dt>
-                <dd className="mt-1 font-medium">{formatFileSize(sourceVideo.bytes)}</dd>
-              </div>
-            </dl>
-          </div>
-          {transformationId && <TransformationForm transformationId={transformationId} />}
-        </>
+      {isReady && transformationId && (
+        <TransformationForm transformationId={transformationId} />
       )}
-    </section>
+    </>
   );
 }

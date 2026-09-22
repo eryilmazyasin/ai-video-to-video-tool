@@ -8,6 +8,12 @@ export type TransformationHistoryStatus =
   | "completed"
   | "failed";
 
+export type TransformationHistoryFilter =
+  | "all"
+  | "active"
+  | "completed"
+  | "failed";
+
 export interface TransformationHistoryRequest {
   name: string | null;
   startSeconds: number;
@@ -48,6 +54,10 @@ export interface TransformationHistoryResponse {
   transformations: TransformationHistoryItem[];
 }
 
-export interface TransformationCardProps {
-  transformation: TransformationHistoryItem;
+export interface TransformationHistoryProps {
+  selectedTransformationId: string | null;
+  isCreatingNew: boolean;
+  onSelectTransformation: (transformation: TransformationHistoryItem) => void;
+  onStartNewTransformation: () => void;
+  onTransformationsChange: (transformations: TransformationHistoryItem[]) => void;
 }

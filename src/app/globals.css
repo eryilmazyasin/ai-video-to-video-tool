@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+html {
+  /* Reserve scrollbar space so async status changes do not move the layout. */
+  scrollbar-gutter: stable;
 }
 
 @theme inline {
@@ -12,15 +17,92 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Give the main generation action a stronger AI-like interaction. */
+.ai-cta {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-size: 180% 100%;
+  transition:
+    background-position 350ms ease,
+    box-shadow 350ms ease,
+    filter 350ms ease,
+    transform 250ms ease;
+}
+
+.ai-cta::after {
+  position: absolute;
+  inset: -50% auto -50% -35%;
+  width: 22%;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 55%),
+    transparent
+  );
+  transform: translateX(-220%) rotate(14deg);
+  transition: transform 650ms ease;
+}
+
+.ai-cta:not(:disabled):hover {
+  background-position: 100% 0;
+  box-shadow:
+    0 0 0 1px rgb(196 181 253 / 55%),
+    0 10px 30px rgb(124 58 237 / 35%),
+    0 0 34px rgb(217 70 239 / 22%);
+  filter: saturate(1.12);
+  transform: translateY(-2px);
+}
+
+.ai-cta:not(:disabled):hover::after {
+  transform: translateX(650%) rotate(14deg);
+}
+
+.ai-cta:not(:disabled):active {
+  transform: translateY(0) scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-cta,
+  .ai-cta::after {
+    transition: none;
+  }
+}
+
+/* Keep the provider uploader visually aligned with the app's soft indigo palette. */
+.uploadcare-dropzone {
+  --uc-primary-oklch-light: 55% 0.2 275;
+  --uc-primary-light: #4f46e5;
+  --uc-primary-hover-light: #4338ca;
+  --uc-simple-btn-light: #eef2ff;
+  --uc-simple-btn-hover-light: #e0e7ff;
+  --uc-simple-btn-foreground-light: #3730a3;
+  --uc-primary: #4f46e5;
+  --uc-primary-hover: #4338ca;
+  --uc-primary-foreground: #ffffff;
+  --uc-simple-btn: #eef2ff;
+  --uc-simple-btn-hover: #e0e7ff;
+  --uc-simple-btn-foreground: #3730a3;
+  --uc-secondary: #f8fafc;
+  --uc-secondary-hover: #f1f5f9;
+  --uc-secondary-foreground: #374151;
+  --uc-border: #e5e7eb;
+  --uc-radius: 10px;
 }

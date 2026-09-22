@@ -152,6 +152,37 @@ export async function markFailed(
   );
 }
 
+export async function resetRetryableTransformation(
+  transformationId: ObjectId,
+  ownerId: string,
+) {
+  const collection = await getTransformationCollection();
+  const now = new Date();
+
+  // Only provider submission or processing failures can safely be resubmitted.
+  return collection.findOneAndUpdate(
+    {
+      _id: transformationId,
+      ownerId,
+      status: "failed",
+      "error.retryable": true,
+      "error.stage": { $in: ["submission", "processing"] },
+    },
+    {
+      $set: { status: "ready", updatedAt: now },
+      $unset: {
+        error: "",
+        "provider.jobId": "",
+        "provider.rawStatus": "",
+        "provider.creditsCharged": "",
+        output: "",
+        completedAt: "",
+      },
+    },
+    { returnDocument: "after" },
+  );
+}
+
 export async function findByProviderJobId(providerJobId: string) {
   const collection = await getTransformationCollection();
 

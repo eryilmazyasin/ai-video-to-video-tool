@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
-  TransformationCardProps,
   TransformationHistoryItem,
-  TransformationHistoryRequest,
+  TransformationHistoryFilter,
+  TransformationHistoryProps,
   TransformationHistoryResponse,
   TransformationHistoryStatus,
 } from "@/components/TransformationHistory/TransformationHistory.types";
 import { transformationHistoryRefreshEvent } from "@/shared/browserEvents";
+import { getCloudinaryVideoThumbnailUrl } from "@/shared/cloudinaryMedia";
 
 const historyPollIntervalMilliseconds = 4_500;
 
@@ -31,16 +32,12 @@ const statusLabels: Record<TransformationHistoryStatus, string> = {
   failed: "Needs attention",
 };
 
-const statusClasses: Record<TransformationHistoryStatus, string> = {
-  staging: "bg-zinc-100 text-zinc-700",
-  ready: "bg-sky-100 text-sky-800",
-  submitting: "bg-amber-100 text-amber-900",
-  queued: "bg-violet-100 text-violet-900",
-  processing: "bg-violet-100 text-violet-900",
-  saving_output: "bg-violet-100 text-violet-900",
-  completed: "bg-emerald-100 text-emerald-900",
-  failed: "bg-red-100 text-red-800",
-};
+const statusFilters: { value: TransformationHistoryFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "completed", label: "Done" },
+  { value: "failed", label: "Issues" },
+];
 
 function isTransformationHistoryResponse(
   value: unknown,
@@ -80,14 +77,6 @@ function getErrorMessage(value: unknown) {
   return "Your transformation history could not be loaded. Please try again.";
 }
 
-function formatFileSize(bytes: number) {
-  if (bytes < 1024 * 1024) {
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  }
-
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 function formatDate(date: string) {
   const value = new Date(date);
 
@@ -95,179 +84,66 @@ function formatDate(date: string) {
     return "Date unavailable";
   }
 
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfDate = new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  const daysAgo = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86_400_000);
+
+  if (daysAgo === 0) {
+    return "Today";
+  }
+
+  if (daysAgo === 1) {
+    return "Yesterday";
+  }
+
   return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
+    month: "short",
+    day: "numeric",
   }).format(value);
 }
 
-function getPromptTypeLabel(
-  promptType: TransformationHistoryRequest["style"]["promptType"],
-) {
-  if (promptType === "append_default") {
-    return "Add to default";
+function getProjectContext(transformation: TransformationHistoryItem) {
+  if (transformation.request?.style.artStyle) {
+    return transformation.request.style.artStyle;
   }
 
-  if (promptType === "custom") {
-    return "Custom prompt";
-  }
-
-  if (promptType === "default") {
-    return "Default prompt";
-  }
-
-  return "Not specified";
+  return transformation.sourceVideo.mimeType.startsWith("video/")
+    ? "Source video"
+    : "Video project";
 }
 
-function TransformationCard({ transformation }: TransformationCardProps) {
-  const { request, sourceVideo } = transformation;
+function getStatusClasses(status: TransformationHistoryStatus) {
+  if (status === "failed") {
+    return "bg-rose-500 ring-rose-100";
+  }
 
-  return (
-    <article className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h3 className="truncate text-base font-semibold text-zinc-950" title={sourceVideo.originalName}>
-            {request?.name || sourceVideo.originalName}
-          </h3>
-          <p className="mt-1 text-sm text-zinc-600">Created {formatDate(transformation.createdAt)}</p>
-        </div>
-        <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${statusClasses[transformation.status]}`}>
-          {statusLabels[transformation.status]}
-        </span>
-      </div>
+  if (status === "completed") {
+    return "bg-emerald-500 ring-emerald-100";
+  }
 
-      <div className="grid gap-5 p-4 lg:grid-cols-2">
-        <div>
-          <h4 className="text-sm font-semibold text-zinc-900">Source video</h4>
-          {sourceVideo.url ? (
-            <>
-              <video
-                className="mt-3 aspect-video w-full rounded-xl bg-zinc-950 object-contain"
-                controls
-                preload="metadata"
-                src={sourceVideo.url}
-                aria-label={`Source video: ${sourceVideo.originalName}`}
-              >
-                Your browser does not support video preview.
-              </video>
-              <a
-                className="mt-3 inline-flex text-sm font-semibold text-violet-700 underline underline-offset-4 hover:text-violet-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700"
-                href={sourceVideo.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open source video
-              </a>
-            </>
-          ) : (
-            <p className="mt-3 rounded-xl bg-zinc-100 p-3 text-sm text-zinc-600">
-              Source preview is unavailable for this earlier record.
-            </p>
-          )}
-          <dl className="mt-3 grid grid-cols-2 gap-3 text-sm text-zinc-700">
-            <div>
-              <dt className="text-zinc-500">Format</dt>
-              <dd className="mt-1 font-medium">{sourceVideo.mimeType}</dd>
-            </div>
-            <div>
-              <dt className="text-zinc-500">Size</dt>
-              <dd className="mt-1 font-medium">{formatFileSize(sourceVideo.bytes)}</dd>
-            </div>
-          </dl>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-semibold text-zinc-900">Transformation</h4>
-          {request ? (
-            <dl className="mt-3 grid gap-3 text-sm text-zinc-700 sm:grid-cols-2">
-              <div>
-                <dt className="text-zinc-500">Clip</dt>
-                <dd className="mt-1 font-medium">{request.startSeconds}s – {request.endSeconds}s</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">Frame rate</dt>
-                <dd className="mt-1 font-medium">{request.fpsResolution ?? "Not specified"}</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">Style</dt>
-                <dd className="mt-1 font-medium">{request.style.artStyle}</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">Model</dt>
-                <dd className="mt-1 font-medium">{request.style.model ?? "Not specified"}</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">Prompt mode</dt>
-                <dd className="mt-1 font-medium">{getPromptTypeLabel(request.style.promptType)}</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">Version</dt>
-                <dd className="mt-1 font-medium">{request.style.version ?? "Not specified"}</dd>
-              </div>
-              {request.style.prompt && (
-                <div className="sm:col-span-2">
-                  <dt className="text-zinc-500">Prompt</dt>
-                  <dd className="mt-1 whitespace-pre-wrap font-medium">{request.style.prompt}</dd>
-                </div>
-              )}
-            </dl>
-          ) : (
-            <p className="mt-3 text-sm leading-6 text-zinc-600">
-              This source video has not been submitted for transformation yet.
-            </p>
-          )}
-
-          {transformation.output && (
-            <div className="mt-5 border-t border-zinc-100 pt-5">
-              <h4 className="text-sm font-semibold text-zinc-900">Generated video</h4>
-              <video
-                className="mt-3 aspect-video w-full rounded-xl bg-zinc-950 object-contain"
-                controls
-                preload="metadata"
-                src={transformation.output.url}
-                aria-label={`Generated video for ${sourceVideo.originalName}`}
-              >
-                Your browser does not support video preview.
-              </video>
-              <a
-                className="mt-3 inline-flex text-sm font-semibold text-violet-700 underline underline-offset-4 hover:text-violet-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700"
-                href={transformation.output.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open generated video
-              </a>
-            </div>
-          )}
-
-          {transformation.error && (
-            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900" role="alert">
-              <p className="font-semibold">{transformation.error.message}</p>
-              {transformation.error.retryable && <p className="mt-1">We will keep trying automatically.</p>}
-            </div>
-          )}
-
-          <p className="mt-5 text-xs text-zinc-500">
-            Last updated {formatDate(transformation.updatedAt)}
-            {transformation.creditsCharged !== null && ` · ${transformation.creditsCharged} credits charged`}
-          </p>
-        </div>
-      </div>
-    </article>
-  );
+  return "bg-violet-500 ring-violet-100";
 }
 
-export default function TransformationHistory() {
+export default function TransformationHistory({
+  selectedTransformationId,
+  isCreatingNew,
+  onSelectTransformation,
+  onStartNewTransformation,
+  onTransformationsChange,
+}: TransformationHistoryProps) {
   const [transformations, setTransformations] = useState<TransformationHistoryItem[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<TransformationHistoryFilter>("all");
   const isMountedRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const inFlightRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async ({ manual = false }: { manual?: boolean } = {}) => {
     if (inFlightRef.current) {
       return;
     }
@@ -277,8 +153,8 @@ export default function TransformationHistory() {
     inFlightRef.current = true;
     abortControllerRef.current = controller;
 
-    if (isMountedRef.current && !isInitialLoad) {
-      setIsRefreshing(true);
+    if (isMountedRef.current && manual && !isInitialLoad) {
+      setIsManualRefreshing(true);
     }
 
     try {
@@ -294,6 +170,14 @@ export default function TransformationHistory() {
 
       if (isMountedRef.current) {
         setTransformations(body.transformations);
+        onTransformationsChange(body.transformations);
+        const selectedTransformation = body.transformations.find(
+          (item) => item.id === selectedTransformationId,
+        );
+
+        if (!isCreatingNew && !selectedTransformation && body.transformations[0]) {
+          onSelectTransformation(body.transformations[0]);
+        }
         setError(null);
       }
     } catch (loadError) {
@@ -318,10 +202,12 @@ export default function TransformationHistory() {
       if (isMountedRef.current) {
         hasLoadedRef.current = true;
         setIsInitialLoading(false);
-        setIsRefreshing(false);
+        if (manual) {
+          setIsManualRefreshing(false);
+        }
       }
     }
-  }, []);
+  }, [isCreatingNew, onSelectTransformation, onTransformationsChange, selectedTransformationId]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -362,53 +248,183 @@ export default function TransformationHistory() {
     return () => window.clearTimeout(timeoutId);
   }, [loadHistory, transformations]);
 
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const visibleTransformations = transformations.filter((transformation) => {
+    const name = transformation.request?.name || transformation.sourceVideo.originalName;
+    const matchesSearch = name.toLowerCase().includes(normalizedSearchQuery);
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && transformation.status !== "completed" && transformation.status !== "failed") ||
+      (statusFilter === "completed" && transformation.status === "completed") ||
+      (statusFilter === "failed" && transformation.status === "failed");
+
+    return matchesSearch && matchesStatus;
+  });
+
   return (
-    <section className="mt-8" aria-labelledby="transformation-history-title">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <section className="flex h-full min-h-0 flex-1 flex-col p-4 sm:p-5" aria-labelledby="transformation-history-title">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-violet-700">Your work</p>
-          <h2 id="transformation-history-title" className="mt-1 text-2xl font-semibold tracking-tight text-zinc-950">
-            Transformation history
+          <h2 id="transformation-history-title" className="text-base font-semibold tracking-tight text-slate-950">
+            Recent projects
           </h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">
-            Recent uploads and results update automatically while this page stays open.
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            {transformations.length === 0 ? "Your video transformations." : `${transformations.length} saved ${transformations.length === 1 ? "project" : "projects"}`}
           </p>
         </div>
         <button
           type="button"
-          onClick={() => void loadHistory()}
-          disabled={isInitialLoading || isRefreshing}
-          className="w-fit rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => void loadHistory({ manual: true })}
+          disabled={isInitialLoading || isManualRefreshing}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isRefreshing ? "Refreshing…" : "Refresh history"}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" className={`size-3.5 ${isManualRefreshing ? "animate-spin" : ""}`} aria-hidden="true">
+            <path d="M15.5 8.25A5.75 5.75 0 1 0 16 12" strokeLinecap="round" />
+            <path d="M15.5 4.5v3.75h-3.75" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {isManualRefreshing ? "Refreshing" : "Refresh"}
         </button>
       </div>
 
+      <button
+        type="button"
+        onClick={onStartNewTransformation}
+        className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-3 py-2 text-sm font-semibold text-white shadow-sm shadow-violet-200 transition hover:bg-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+      >
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" className="size-4" aria-hidden="true">
+          <path d="M10 4v12M4 10h12" strokeLinecap="round" />
+        </svg>
+        New transformation
+      </button>
+
+      <label className="relative mt-4 block">
+        <span className="sr-only">Search transformation history</span>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true">
+          <circle cx="8.75" cy="8.75" r="4.75" />
+          <path d="m12.25 12.25 3.5 3.5" strokeLinecap="round" />
+        </svg>
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search projects"
+          className="min-h-11 w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+        />
+      </label>
+
+      <div className="mt-3 grid grid-cols-4 gap-1.5" aria-label="Filter projects by status">
+        {statusFilters.map((filter) => (
+          <button
+            key={filter.value}
+            type="button"
+            onClick={() => setStatusFilter(filter.value)}
+            aria-pressed={statusFilter === filter.value}
+            className={`min-h-8 rounded-lg px-1.5 text-xs font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 ${
+              statusFilter === filter.value
+                ? "bg-slate-900 text-white shadow-sm"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
       {isInitialLoading && (
-        <div className="mt-5 rounded-2xl border border-zinc-200 bg-white p-5 text-sm text-zinc-600" role="status">
-          Loading your transformation history…
+        <div className="space-y-2" role="status" aria-label="Loading transformation history">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-2.5">
+              <span className="size-10 shrink-0 animate-pulse rounded-lg bg-slate-100" />
+              <span className="min-w-0 flex-1 space-y-2">
+                <span className="block h-3 w-3/4 animate-pulse rounded bg-slate-100" />
+                <span className="block h-2.5 w-1/2 animate-pulse rounded bg-slate-100" />
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
       {!isInitialLoading && error && (
-        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900" role="alert">
-          {error}
+        <div className="rounded-xl border border-rose-200 border-l-2 border-l-rose-400 bg-rose-50/80 p-3 text-xs leading-5 text-rose-900" role="alert">
+          <p>{error}</p>
+          <button type="button" onClick={() => void loadHistory({ manual: true })} className="mt-2 rounded-md font-semibold text-rose-800 underline decoration-rose-300 underline-offset-2 transition hover:text-rose-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600">Try again</button>
         </div>
       )}
 
       {!isInitialLoading && transformations.length === 0 && !error && (
-        <div className="mt-5 rounded-2xl border border-dashed border-zinc-300 bg-white p-5 text-sm leading-6 text-zinc-600">
-          Your recent uploads and transformations will appear here.
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center text-xs leading-5 text-slate-500">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-2 size-5 text-slate-400" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2" /><path d="m7 13 2-2 1.5 1.5L12 11l2 2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          Your projects will appear here after your first transformation.
         </div>
       )}
 
-      {transformations.length > 0 && (
-        <div className="mt-5 space-y-5" aria-live="polite">
-          {transformations.map((transformation) => (
-            <TransformationCard key={transformation.id} transformation={transformation} />
-          ))}
+      {transformations.length > 0 && visibleTransformations.length === 0 && (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center text-xs leading-5 text-slate-500">
+          No projects match this view.
+          <button type="button" onClick={() => { setSearchQuery(""); setStatusFilter("all"); }} className="mt-2 block w-full font-semibold text-violet-700 transition hover:text-violet-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600">Clear search and filters</button>
         </div>
       )}
+
+      {visibleTransformations.length > 0 && (
+        <div className="space-y-1.5" aria-live="polite">
+          {visibleTransformations.map((transformation) => {
+            const thumbnailUrl = getCloudinaryVideoThumbnailUrl(
+              transformation.output?.url ?? transformation.sourceVideo.url,
+            );
+
+            return (
+              <button
+                key={transformation.id}
+                type="button"
+                onClick={() => onSelectTransformation(transformation)}
+                aria-current={selectedTransformationId === transformation.id ? "true" : undefined}
+                className={`group flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-violet-600 ${
+                  selectedTransformationId === transformation.id
+                    ? "border-violet-200 bg-violet-50 shadow-sm shadow-violet-100"
+                    : "border-transparent hover:border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                <span className={`relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg ${transformation.status === "failed" ? "bg-rose-100 text-rose-500" : transformation.status === "completed" ? "bg-emerald-100 text-emerald-600" : "bg-violet-100 text-violet-600"}`}>
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-5" aria-hidden="true">
+                    <rect x="3" y="4" width="14" height="12" rx="2" />
+                    <path d="M8.5 7.5 12 10l-3.5 2.5v-5Z" fill="currentColor" stroke="none" />
+                  </svg>
+                  {thumbnailUrl && (
+                    // Cloudinary already delivers this thumbnail at its display size.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={thumbnailUrl}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 size-full object-cover"
+                      onError={(event) => event.currentTarget.remove()}
+                    />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-slate-900">
+                    {transformation.request?.name || transformation.sourceVideo.originalName}
+                  </span>
+                  <span className="mt-1 block truncate text-xs text-slate-400">
+                    {getProjectContext(transformation)} · {formatDate(transformation.createdAt)}
+                  </span>
+                </span>
+                <span
+                  className={`size-1.5 shrink-0 rounded-full ring-2 ${getStatusClasses(transformation.status)} ${automaticallyUpdatedStatuses.has(transformation.status) ? "animate-pulse motion-reduce:animate-none" : ""}`}
+                  title={statusLabels[transformation.status]}
+                  aria-label={statusLabels[transformation.status]}
+                  role="status"
+                >
+                  <span className="sr-only">{statusLabels[transformation.status]}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      </div>
     </section>
   );
 }

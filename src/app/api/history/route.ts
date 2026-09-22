@@ -13,10 +13,12 @@ const historyLimit = 12;
 
 function getSafeError(error: TransformationError) {
   const safeMessages: Record<string, string> = {
-    source_video_unavailable: "The stored source video is unavailable.",
+    source_image_unavailable: "The stored source image is unavailable.",
     provider_submission_failed: "The transformation could not be submitted. Please try again.",
+    insufficient_credits: "Not enough Magic Hour credits for these image settings.",
+    invalid_image_settings: "Magic Hour rejected these settings. Try fewer results or a different model or resolution.",
     provider_processing_failed: "The transformation could not be completed.",
-    output_copy_failed: "The generated video could not be saved. Retrying automatically.",
+    output_copy_failed: "The generated image could not be saved. Retrying automatically.",
   };
 
   return {
@@ -34,7 +36,7 @@ function serializeTransformation(transformation: TransformationDocument & { _id:
   return {
     id: transformation._id.toHexString(),
     status: transformation.status,
-    sourceVideo: {
+    sourceImage: {
       url: transformation.input.cloudinaryUrl ?? null,
       originalName: transformation.input.originalName,
       mimeType: transformation.input.mimeType,
@@ -43,21 +45,17 @@ function serializeTransformation(transformation: TransformationDocument & { _id:
     request: request
       ? {
           name: request.name ?? null,
-          startSeconds: request.startSeconds,
-          endSeconds: request.endSeconds,
-          fpsResolution: request.fpsResolution ?? null,
+          aspectRatio: request.aspectRatio ?? null,
+          imageCount: request.imageCount ?? null,
+          resolution: request.resolution ?? null,
+          model: request.model ?? null,
           style: {
-            artStyle: request.style.artStyle,
-            model: request.style.model ?? null,
-            prompt: request.style.prompt ?? null,
-            promptType: request.style.promptType ?? null,
-            version: request.style.version ?? null,
+            prompt: request.style.prompt,
           },
         }
       : null,
-    output: transformation.output
-      ? { url: transformation.output.cloudinaryUrl }
-      : null,
+    outputs: (transformation.outputs ?? (transformation.output ? [transformation.output] : []))
+      .map((output) => ({ url: output.cloudinaryUrl })),
     error: transformation.error ? getSafeError(transformation.error) : null,
     creditsCharged: transformation.provider.creditsCharged ?? null,
     createdAt: transformation.createdAt.toISOString(),

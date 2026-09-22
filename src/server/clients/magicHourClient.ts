@@ -4,8 +4,8 @@ import { Client } from "magic-hour";
 
 import { getMagicHourApiEnv } from "@/server/config/env";
 import type {
-  MagicHourVideoToVideoRequest,
-  MagicHourVideoToVideoResponse,
+  MagicHourImageToImageRequest,
+  MagicHourImageToImageResponse,
 } from "@/server/clients/magicHourClient.types";
 
 declare global {
@@ -23,10 +23,10 @@ function getMagicHourClient() {
   return globalThis.magicHourClient;
 }
 
-export function createMagicHourVideoToVideo(
-  request: MagicHourVideoToVideoRequest,
-): Promise<MagicHourVideoToVideoResponse> {
-  return getMagicHourClient().v1.videoToVideo.create(request);
+export function createMagicHourImageToImage(
+  request: MagicHourImageToImageRequest,
+): Promise<MagicHourImageToImageResponse> {
+  return getMagicHourClient().v1.aiImageEditor.create(request);
 }
 
 function getSafeProviderField(value: unknown) {

@@ -1,4 +1,4 @@
-import { uploadOutputVideoFromUrl } from "@/server/clients/cloudinaryClient";
+import { uploadOutputImageFromUrl } from "@/server/clients/cloudinaryClient";
 import { getMagicHourWebhookEnv } from "@/server/config/env";
 import {
   claimForOutputSave,
@@ -9,18 +9,18 @@ import {
   markProviderErrored,
 } from "@/server/db-actions/transformationActions";
 import {
-  getFirstHttpsDownloadUrl,
+  getHttpsDownloadUrls,
   getMagicHourWebhookHeaders,
   parseMagicHourWebhookEvent,
   readMagicHourWebhookBody,
   verifyMagicHourWebhook,
 } from "@/server/webhooks/magicHourWebhook";
-import type {
-  MagicHourVideoCompletedEvent,
-  MagicHourVideoEvent,
-} from "@/server/webhooks/magicHourWebhook.types";
+import { NextRequest, NextResponse } from "next/server";
 
-import { NextResponse, type NextRequest } from "next/server";
+import type {
+  MagicHourImageCompletedEvent,
+  MagicHourImageEvent,
+} from "@/server/webhooks/magicHourWebhook.types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -29,7 +29,9 @@ function acknowledgement(state: string) {
   return NextResponse.json({ received: true, state });
 }
 
-async function recordRetryableOutputFailure(transformationId: Parameters<typeof markOutputCopyFailed>[0]) {
+async function recordRetryableOutputFailure(
+  transformationId: Parameters<typeof markOutputCopyFailed>[0],
+) {
   try {
     await markOutputCopyFailed(transformationId);
   } catch {
@@ -37,11 +39,14 @@ async function recordRetryableOutputFailure(transformationId: Parameters<typeof 
   }
 }
 
-async function handleCompletedEvent(event: MagicHourVideoCompletedEvent) {
-  const downloadUrl = getFirstHttpsDownloadUrl(event);
+async function handleCompletedEvent(event: MagicHourImageCompletedEvent) {
+  const downloadUrls = getHttpsDownloadUrls(event);
 
-  if (!downloadUrl) {
-    return NextResponse.json({ error: "The completed event is invalid." }, { status: 400 });
+  if (!downloadUrls) {
+    return NextResponse.json(
+      { error: "The completed event is invalid." },
+      { status: 400 },
+    );
   }
 
   let claimedTransformation;
@@ -54,26 +59,47 @@ async function handleCompletedEvent(event: MagicHourVideoCompletedEvent) {
         : {}),
     });
   } catch {
-    return NextResponse.json({ error: "The event could not be recorded." }, { status: 500 });
+    return NextResponse.json(
+      { error: "The event could not be recorded." },
+      { status: 500 },
+    );
   }
 
   if (!claimedTransformation) {
     return acknowledgement("ignored");
   }
 
-  let outputVideo;
+  const expectedOutputCount = claimedTransformation.request?.imageCount ?? 1;
+
+  if (downloadUrls.length !== expectedOutputCount) {
+    await recordRetryableOutputFailure(claimedTransformation._id);
+    return NextResponse.json(
+      { error: "The completed event did not include all generated images." },
+      { status: 502 },
+    );
+  }
+
+  let outputImages;
 
   try {
     // The output copy is intentionally inline so a failed delivery can be retried safely.
-    outputVideo = await uploadOutputVideoFromUrl({
-      sourceUrl: downloadUrl,
-      providerJobId: event.payload.id,
+    const uploads = await Promise.allSettled(downloadUrls.map((sourceUrl, outputIndex) =>
+      uploadOutputImageFromUrl({ sourceUrl, providerJobId: event.payload.id, outputIndex }),
+    ));
+
+    if (uploads.some((upload) => upload.status === "rejected")) {
+      throw new Error("At least one generated image could not be saved.");
+    }
+
+    outputImages = uploads.map((upload) => {
+      if (upload.status !== "fulfilled") throw new Error("Generated image upload failed.");
+      return upload.value;
     });
   } catch {
     await recordRetryableOutputFailure(claimedTransformation._id);
 
     return NextResponse.json(
-      { error: "The generated video could not be saved." },
+      { error: "The generated image could not be saved." },
       { status: 502 },
     );
   }
@@ -82,8 +108,10 @@ async function handleCompletedEvent(event: MagicHourVideoCompletedEvent) {
     const completedTransformation = await markCompletedFromOutput(
       claimedTransformation._id,
       {
-        cloudinaryPublicId: outputVideo.publicId,
-        cloudinaryUrl: outputVideo.secureUrl,
+        outputs: outputImages.map((image) => ({
+          cloudinaryPublicId: image.publicId,
+          cloudinaryUrl: image.secureUrl,
+        })),
         rawStatus: event.payload.status,
         ...(event.payload.creditsCharged !== undefined
           ? { creditsCharged: event.payload.creditsCharged }
@@ -97,13 +125,16 @@ async function handleCompletedEvent(event: MagicHourVideoCompletedEvent) {
   } catch {
     await recordRetryableOutputFailure(claimedTransformation._id);
 
-    return NextResponse.json({ error: "The event could not be finalized." }, { status: 500 });
+    return NextResponse.json(
+      { error: "The event could not be finalized." },
+      { status: 500 },
+    );
   }
 
   return acknowledgement("completed");
 }
 
-async function handleVideoEvent(event: MagicHourVideoEvent) {
+async function handleImageEvent(event: MagicHourImageEvent) {
   try {
     const transformation = await findByProviderJobId(event.payload.id);
 
@@ -111,20 +142,29 @@ async function handleVideoEvent(event: MagicHourVideoEvent) {
       return acknowledgement("ignored");
     }
   } catch {
-    return NextResponse.json({ error: "The event could not be recorded." }, { status: 500 });
+    return NextResponse.json(
+      { error: "The event could not be recorded." },
+      { status: 500 },
+    );
   }
 
-  if (event.type === "video.started") {
+  if (event.type === "image.started") {
     try {
-      await markProcessingByProviderJobId(event.payload.id, event.payload.status);
+      await markProcessingByProviderJobId(
+        event.payload.id,
+        event.payload.status,
+      );
     } catch {
-      return NextResponse.json({ error: "The event could not be recorded." }, { status: 500 });
+      return NextResponse.json(
+        { error: "The event could not be recorded." },
+        { status: 500 },
+      );
     }
 
     return acknowledgement("processing");
   }
 
-  if (event.type === "video.errored") {
+  if (event.type === "image.errored") {
     try {
       const failedTransformation = await markProviderErrored(
         event.payload.id,
@@ -135,7 +175,10 @@ async function handleVideoEvent(event: MagicHourVideoEvent) {
         return acknowledgement("ignored");
       }
     } catch {
-      return NextResponse.json({ error: "The event could not be recorded." }, { status: 500 });
+      return NextResponse.json(
+        { error: "The event could not be recorded." },
+        { status: 500 },
+      );
     }
 
     return acknowledgement("failed");
@@ -150,11 +193,17 @@ export async function POST(request: NextRequest) {
   try {
     rawBody = await readMagicHourWebhookBody(request);
   } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid request body." },
+      { status: 400 },
+    );
   }
 
   if (rawBody === null) {
-    return NextResponse.json({ error: "Request body is too large." }, { status: 413 });
+    return NextResponse.json(
+      { error: "Request body is too large." },
+      { status: 413 },
+    );
   }
 
   let webhookSecret: string;
@@ -162,7 +211,10 @@ export async function POST(request: NextRequest) {
   try {
     webhookSecret = getMagicHourWebhookEnv().webhookSecret;
   } catch {
-    return NextResponse.json({ error: "Webhook service is unavailable." }, { status: 503 });
+    return NextResponse.json(
+      { error: "Webhook service is unavailable." },
+      { status: 503 },
+    );
   }
 
   if (
@@ -172,18 +224,24 @@ export async function POST(request: NextRequest) {
       webhookSecret,
     )
   ) {
-    return NextResponse.json({ error: "Invalid webhook signature." }, { status: 401 });
+    return NextResponse.json(
+      { error: "Invalid webhook signature." },
+      { status: 401 },
+    );
   }
 
   const event = parseMagicHourWebhookEvent(rawBody);
 
   if (event === null) {
-    return NextResponse.json({ error: "Invalid webhook event." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid webhook event." },
+      { status: 400 },
+    );
   }
 
   if (typeof event === "string") {
     return acknowledgement("ignored");
   }
 
-  return handleVideoEvent(event);
+  return handleImageEvent(event);
 }

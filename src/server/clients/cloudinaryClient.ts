@@ -1,13 +1,13 @@
 import "server-only";
 
+import { getCloudinaryEnv } from "@/server/config/env";
 import { v2 as cloudinary } from "cloudinary";
 
-import { getCloudinaryEnv } from "@/server/config/env";
 import type {
-  CloudinaryVideoUpload,
-  UploadOutputVideoFromUrlInput,
-  UploadSourceVideoFromUrlInput,
-  UploadVideoFromUrlInput,
+  CloudinaryImageUpload,
+  UploadImageFromUrlInput,
+  UploadOutputImageFromUrlInput,
+  UploadSourceImageFromUrlInput,
 } from "@/server/clients/cloudinaryClient.types";
 
 const publicIdSegmentPattern = /^[A-Za-z0-9_-]{1,128}$/;
@@ -57,9 +57,7 @@ function getOptionalString(value: unknown) {
 }
 
 function getOptionalNonNegativeNumber(value: unknown) {
-  return typeof value === "number" &&
-    Number.isFinite(value) &&
-    value >= 0
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
     ? value
     : null;
 }
@@ -68,7 +66,9 @@ function getRequiredPublicId(value: unknown) {
   const publicId = getOptionalString(value);
 
   if (!publicId) {
-    throw new Error("Cloudinary did not return a public ID for the uploaded video.");
+    throw new Error(
+      "Cloudinary did not return a public ID for the uploaded image.",
+    );
   }
 
   return publicId;
@@ -78,7 +78,9 @@ function getRequiredSecureUrl(value: unknown) {
   const secureUrl = getOptionalString(value);
 
   if (!secureUrl?.startsWith("https://")) {
-    throw new Error("Cloudinary did not return a secure URL for the uploaded video.");
+    throw new Error(
+      "Cloudinary did not return a secure URL for the uploaded image.",
+    );
   }
 
   return secureUrl;
@@ -92,7 +94,7 @@ function getUploadResponseValue(response: unknown, fieldName: string) {
   return (response as Record<string, unknown>)[fieldName];
 }
 
-function normalizeUploadResponse(response: unknown): CloudinaryVideoUpload {
+function normalizeUploadResponse(response: unknown): CloudinaryImageUpload {
   return {
     publicId: getRequiredPublicId(
       getUploadResponseValue(response, "public_id"),
@@ -104,56 +106,57 @@ function normalizeUploadResponse(response: unknown): CloudinaryVideoUpload {
       getUploadResponseValue(response, "bytes"),
     ),
     format: getOptionalString(getUploadResponseValue(response, "format")),
-    duration: getOptionalNonNegativeNumber(
-      getUploadResponseValue(response, "duration"),
-    ),
   };
 }
 
-async function uploadVideoFromUrl(
-  input: UploadVideoFromUrlInput,
-): Promise<CloudinaryVideoUpload> {
+async function uploadImageFromUrl(
+  input: UploadImageFromUrlInput,
+): Promise<CloudinaryImageUpload> {
   let response: unknown;
 
   try {
     response = await getCloudinaryClient().uploader.upload(input.sourceUrl, {
-      resource_type: "video",
+      resource_type: "image",
       public_id: input.publicId,
       overwrite: input.overwrite ?? false,
     });
   } catch {
     // Do not expose provider details because they can include signed URLs.
-    throw new Error("Cloudinary could not upload the video. Please try again.");
+    throw new Error("Cloudinary could not upload the image. Please try again.");
   }
 
   return normalizeUploadResponse(response);
 }
 
-export function uploadSourceVideoFromUrl(
-  input: UploadSourceVideoFromUrlInput,
-): Promise<CloudinaryVideoUpload> {
+export function uploadSourceImageFromUrl(
+  input: UploadSourceImageFromUrlInput,
+): Promise<CloudinaryImageUpload> {
   const uploadcareUuid = validatePublicIdSegment(
     input.uploadcareUuid,
     "Uploadcare UUID",
   );
 
-  return uploadVideoFromUrl({
+  return uploadImageFromUrl({
     sourceUrl: input.sourceUrl,
-    publicId: `ai-video-to-video/sources/${uploadcareUuid}`,
+    publicId: `ai-image-to-image/sources/${uploadcareUuid}`,
   });
 }
 
-export function uploadOutputVideoFromUrl(
-  input: UploadOutputVideoFromUrlInput,
-): Promise<CloudinaryVideoUpload> {
+export function uploadOutputImageFromUrl(
+  input: UploadOutputImageFromUrlInput,
+): Promise<CloudinaryImageUpload> {
   const providerJobId = validatePublicIdSegment(
     input.providerJobId,
     "Provider job ID",
   );
 
-  return uploadVideoFromUrl({
+  if (!Number.isInteger(input.outputIndex) || input.outputIndex < 0 || input.outputIndex >= 16) {
+    throw new Error("Output index must be between 0 and 15.");
+  }
+
+  return uploadImageFromUrl({
     sourceUrl: input.sourceUrl,
-    publicId: `ai-video-to-video/outputs/${providerJobId}`,
+    publicId: `ai-image-to-image/outputs/${providerJobId}-${input.outputIndex + 1}`,
     // A retry must be able to replace the same deterministic output asset.
     overwrite: true,
   });

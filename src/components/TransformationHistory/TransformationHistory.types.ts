@@ -16,29 +16,24 @@ export type TransformationHistoryFilter =
 
 export interface TransformationHistoryRequest {
   name: string | null;
-  startSeconds: number;
-  endSeconds: number;
-  fpsResolution: "FULL" | "HALF" | null;
-  style: {
-    artStyle: string;
-    model: string | null;
-    prompt: string | null;
-    promptType: "append_default" | "custom" | "default" | null;
-    version: "default" | "v1" | "v2" | null;
-  };
+  aspectRatio: string | null;
+  imageCount: number | null;
+  resolution: string | null;
+  model: string | null;
+  style: { prompt: string };
 }
 
 export interface TransformationHistoryItem {
   id: string;
   status: TransformationHistoryStatus;
-  sourceVideo: {
+  sourceImage: {
     url: string | null;
     originalName: string;
     mimeType: string;
     bytes: number;
   };
   request: TransformationHistoryRequest | null;
-  output: { url: string } | null;
+  outputs: Array<{ url: string }>;
   error: {
     stage: "upload" | "submission" | "processing" | "output";
     message: string;

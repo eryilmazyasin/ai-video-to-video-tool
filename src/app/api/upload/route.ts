@@ -1,11 +1,12 @@
-import { z } from "zod";
-
-import { getAnonymousOwner, setAnonymousOwnerCookie } from "@/server/auth/anonymousOwner";
-import { uploadSourceVideoFromUrl } from "@/server/clients/cloudinaryClient";
+import {
+  getAnonymousOwner,
+  setAnonymousOwnerCookie,
+} from "@/server/auth/anonymousOwner";
+import { uploadSourceImageFromUrl } from "@/server/clients/cloudinaryClient";
 import { getUploadcareFileInfo } from "@/server/clients/uploadcareClient";
 import { createReadyTransformation } from "@/server/db-actions/transformationActions";
-
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 export const runtime = "nodejs";
 
@@ -15,20 +16,28 @@ const uploadRequestSchema = z
   })
   .strict();
 
-const supportedMimeTypes = new Set(["video/mp4", "video/quicktime"]);
-const maximumVideoSizeBytes = 50 * 1024 * 1024;
+const supportedMimeTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const maximumImageSizeBytes = 20 * 1024 * 1024;
 
-function getValidationMessage(mimeType: string, sizeBytes: number, isReady: boolean) {
+function getValidationMessage(
+  mimeType: string,
+  sizeBytes: number,
+  isReady: boolean,
+) {
   if (!isReady) {
-    return "The video upload is still being prepared. Please wait a moment and try again.";
+    return "The image upload is still being prepared. Please wait a moment and try again.";
   }
 
   if (!supportedMimeTypes.has(mimeType.toLowerCase())) {
-    return "Only MP4 and MOV video files are supported.";
+    return "Only JPEG, PNG and WEBP image files are supported.";
   }
 
-  if (sizeBytes > maximumVideoSizeBytes) {
-    return "The video file must be 50 MB or smaller.";
+  if (sizeBytes > maximumImageSizeBytes) {
+    return "The uploaded image must be 20 MB or smaller.";
   }
 
   return null;
@@ -61,7 +70,7 @@ export async function POST(request: NextRequest) {
     uploadcareFile = await getUploadcareFileInfo(input.data.uploadcareUuid);
   } catch {
     return NextResponse.json(
-      { error: "The uploaded video could not be verified. Please try again." },
+      { error: "The uploaded image could not be verified. Please try again." },
       { status: 502 },
     );
   }
@@ -76,16 +85,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: validationMessage }, { status: 422 });
   }
 
-  let cloudinaryVideo;
+  let cloudinaryImage;
 
   try {
-    cloudinaryVideo = await uploadSourceVideoFromUrl({
+    cloudinaryImage = await uploadSourceImageFromUrl({
       sourceUrl: uploadcareFile.cdnUrl,
       uploadcareUuid: uploadcareFile.uuid,
     });
   } catch {
     return NextResponse.json(
-      { error: "The video could not be copied to secure storage. Please try again." },
+      {
+        error:
+          "The image could not be copied to secure storage. Please try again.",
+      },
       { status: 502 },
     );
   }
@@ -99,20 +111,23 @@ export async function POST(request: NextRequest) {
       input: {
         uploadcareUuid: uploadcareFile.uuid,
         uploadcareUrl: uploadcareFile.cdnUrl,
-        cloudinaryPublicId: cloudinaryVideo.publicId,
-        cloudinaryUrl: cloudinaryVideo.secureUrl,
+        cloudinaryPublicId: cloudinaryImage.publicId,
+        cloudinaryUrl: cloudinaryImage.secureUrl,
         originalName: uploadcareFile.originalFilename,
         mimeType: uploadcareFile.mimeType,
         bytes: uploadcareFile.sizeBytes,
       },
       provider: {
-        // Magic Hour can read this public HTTPS video URL during the next step.
-        inputFilePath: cloudinaryVideo.secureUrl,
+        // Magic Hour reads this public HTTPS image URL during the next step.
+        inputFilePath: cloudinaryImage.secureUrl,
       },
     });
   } catch {
     return NextResponse.json(
-      { error: "The video was stored, but its transformation record could not be created." },
+      {
+        error:
+          "The image was stored, but its transformation record could not be created.",
+      },
       { status: 500 },
     );
   }
@@ -122,8 +137,8 @@ export async function POST(request: NextRequest) {
       transformation: {
         id: transformation._id.toHexString(),
         status: transformation.status,
-        sourceVideo: {
-          url: cloudinaryVideo.secureUrl,
+        sourceImage: {
+          url: cloudinaryImage.secureUrl,
           originalName: uploadcareFile.originalFilename,
           mimeType: uploadcareFile.mimeType,
           bytes: uploadcareFile.sizeBytes,

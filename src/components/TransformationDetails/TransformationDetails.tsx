@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 import TransformationForm from "@/components/TransformationForm/TransformationForm";
 import type {
+  SourceImageListItemProps,
   TransformationDetailsProps,
-  TransformationVideoPanelProps,
+  TransformationImagePanelProps,
+  TransformationProgressProps,
 } from "@/components/TransformationDetails/TransformationDetails.types";
 import type { TransformationHistoryStatus } from "@/components/TransformationHistory/TransformationHistory.types";
 import { transformationHistoryRefreshEvent } from "@/shared/browserEvents";
@@ -41,12 +44,20 @@ const activeStatuses = new Set<TransformationHistoryStatus>([
 ]);
 
 const processingMessages: Partial<Record<TransformationHistoryStatus, string>> = {
-  staging: "Your source video is being prepared for transformation.",
+  staging: "Your source image is being prepared for transformation.",
   submitting: "Sending your settings to the transformation service…",
-  queued: "Your video is queued and will start processing shortly.",
-  processing: "Your video is being transformed. This can take a few minutes.",
-  saving_output: "The transformation is complete. Saving your generated video…",
+  queued: "Your image is queued and will start processing shortly.",
+  processing: "Your image is being transformed. This can take a few minutes.",
+  saving_output: "The transformation is complete. Saving your generated image…",
 };
+
+const progressSteps = [
+  { label: "Source prepared", description: "Your image is ready." },
+  { label: "Request sent", description: "Waiting for the AI service." },
+  { label: "AI generating", description: "Creating your image." },
+  { label: "Saving result", description: "Preparing the final file." },
+  { label: "Complete", description: "Your image is ready." },
+] as const;
 
 function formatDate(date: string) {
   const value = new Date(date);
@@ -61,10 +72,6 @@ function formatDate(date: string) {
   }).format(value);
 }
 
-function formatClip(startSeconds: number, endSeconds: number) {
-  return `${startSeconds}s – ${endSeconds}s`;
-}
-
 function formatFileSize(bytes: number) {
   if (bytes < 1024 * 1024) {
     return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -73,7 +80,24 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function VideoPanel({
+function getProgressStepIndex(
+  status: TransformationHistoryStatus,
+  errorStage?: "upload" | "submission" | "processing" | "output",
+) {
+  if (status === "staging" || status === "ready") return 0;
+  if (status === "submitting" || status === "queued") return 1;
+  if (status === "processing") return 2;
+  if (status === "saving_output") return 3;
+  if (status === "completed") return 4;
+
+  if (errorStage === "submission") return 1;
+  if (errorStage === "processing") return 2;
+  if (errorStage === "output") return 3;
+
+  return 0;
+}
+
+function ImagePanel({
   label,
   description,
   url,
@@ -84,7 +108,7 @@ function VideoPanel({
   fileMeta,
   isLoading = false,
   isGenerated = false,
-}: TransformationVideoPanelProps) {
+}: TransformationImagePanelProps) {
   return (
     <article className={`relative flex min-w-0 flex-col rounded-xl border p-4 ${isGenerated ? "overflow-hidden border-violet-400/50 bg-[radial-gradient(circle_at_78%_0%,rgba(168,85,247,0.2),transparent_38%),linear-gradient(145deg,rgba(36,23,70,0.95),rgba(18,18,32,0.98))] shadow-[0_16px_36px_rgb(76_29_149_/_24%)]" : "border-slate-200 bg-slate-50/60"}`}>
       {isGenerated && <span className="pointer-events-none absolute -right-8 -top-8 size-32 rounded-full bg-fuchsia-500/15 blur-3xl" aria-hidden="true" />}
@@ -97,11 +121,9 @@ function VideoPanel({
       </header>
 
       {url ? (
-        <video className={`relative z-10 mt-4 aspect-video w-full rounded-lg bg-slate-950 object-contain shadow-sm ${isGenerated ? "ring-1 ring-violet-300/30 shadow-[0_12px_28px_rgb(0_0_0_/_34%)]" : ""}`} controls preload="metadata" src={url} aria-label={`${label} preview`}>
-          Your browser does not support video preview.
-        </video>
+        <div className={`relative z-10 mt-4 overflow-hidden rounded-lg bg-slate-950 ${isGenerated ? "min-h-72 sm:min-h-[32rem] ring-1 ring-violet-300/30 shadow-[0_12px_28px_rgb(0_0_0_/_34%)]" : "aspect-square"}`}><Image fill sizes="100vw" src={url} alt={`${label} preview`} className="object-contain" /></div>
       ) : (
-        <div className="relative z-10 mt-4 flex aspect-video min-h-52 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white p-5 text-center">
+        <div className={`relative z-10 mt-4 flex items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white p-5 text-center ${isGenerated ? "min-h-72 sm:min-h-[32rem]" : "aspect-square min-h-52"}`}>
           <div className="max-w-xs">
             <span className="mx-auto flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-violet-100">
               {isLoading ? (
@@ -131,12 +153,86 @@ function VideoPanel({
   );
 }
 
+function SourceImageListItem({
+  url,
+  fileName,
+  fileMeta,
+  onPreview,
+}: SourceImageListItemProps) {
+  const isPreviewAvailable = Boolean(url);
+
+  return (
+    <button
+      type="button"
+      onClick={onPreview}
+      disabled={!isPreviewAvailable}
+      className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-left transition hover:border-violet-300 hover:bg-violet-50/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:cursor-default disabled:hover:border-slate-200 disabled:hover:bg-slate-50/70"
+    >
+      <span className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-slate-950 ring-1 ring-slate-200">
+        {url ? <Image fill sizes="48px" src={url} alt="Source image thumbnail" className="object-cover" /> : <span className="flex size-full items-center justify-center text-slate-400">—</span>}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-slate-900">Source image</span>
+        <span className="mt-0.5 block truncate text-xs text-slate-500" title={fileName}>{fileName}</span>
+        <span className="mt-1 block text-xs text-slate-400">{fileMeta}</span>
+      </span>
+      <span className="shrink-0 text-xs font-medium text-violet-700">{isPreviewAvailable ? "View" : "Unavailable"}</span>
+    </button>
+  );
+}
+
+function TransformationProgress({
+  status,
+  errorStage,
+}: TransformationProgressProps) {
+  const currentStepIndex = getProgressStepIndex(status, errorStage);
+  const isCompleted = status === "completed";
+  const isFailed = status === "failed";
+
+  return (
+    <section className="border-b border-violet-100 bg-violet-50/70 px-5 py-5 sm:px-6" aria-labelledby="transformation-progress-title" aria-live="polite">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 id="transformation-progress-title" className="text-sm font-semibold text-slate-950">Transformation progress</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500">This view updates automatically as the provider sends status updates.</p>
+        </div>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${isFailed ? "bg-rose-50 text-rose-700" : isCompleted ? "bg-emerald-50 text-emerald-700" : "bg-sky-50 text-sky-700"}`}>
+          {statusLabels[status]}
+        </span>
+      </div>
+      <ol className="mt-5 grid gap-3 sm:grid-cols-5 sm:gap-2">
+        {progressSteps.map((step, index) => {
+          const isCurrentStep = index === currentStepIndex && !isCompleted && !isFailed;
+          const isCompletedStep = index < currentStepIndex || isCompleted;
+          const isFailedStep = isFailed && index === currentStepIndex;
+
+          return (
+            <li key={step.label} className="relative min-w-0 sm:pr-2">
+              {index < progressSteps.length - 1 && <span className={`absolute left-5 top-4 hidden h-px w-[calc(100%-1rem)] sm:block ${isCompletedStep ? "bg-emerald-400" : "bg-slate-200"}`} aria-hidden="true" />}
+              <div className="relative flex items-start gap-3 sm:flex-col sm:gap-2">
+                <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-4 ring-[#2b2142] ${isFailedStep ? "bg-rose-500 text-white" : isCompletedStep ? "bg-emerald-500 text-white" : isCurrentStep ? "bg-violet-600 text-white shadow-[0_0_0_5px_rgb(139_92_246_/_16%)]" : "bg-slate-200 text-slate-500"}`}>
+                  {isCompletedStep ? "✓" : index + 1}
+                </span>
+                <span className="min-w-0 pt-1 sm:pt-0">
+                  <span className={`block text-xs font-semibold ${isCurrentStep || isCompletedStep || isFailedStep ? "text-slate-900" : "text-slate-500"}`}>{step.label}</span>
+                  <span className="mt-1 block text-[11px] leading-4 text-slate-400">{step.description}</span>
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 export default function TransformationDetails({
   transformation,
 }: TransformationDetailsProps) {
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
-  const { request, sourceVideo } = transformation;
+  const [isSourcePreviewOpen, setIsSourcePreviewOpen] = useState(false);
+  const { request, sourceImage } = transformation;
   const isActive = activeStatuses.has(transformation.status);
   const isCompleted = transformation.status === "completed";
 
@@ -172,14 +268,14 @@ export default function TransformationDetails({
     <>
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60" aria-labelledby="transformation-details-title">
         <header className="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold tracking-[0.14em] text-violet-700 uppercase">Project result</p>
+          <div className="min-w-0 sm:max-w-2xl">
+            <p className="text-xs font-semibold tracking-[0.14em] text-violet-700 uppercase">{transformation.status === "ready" ? "Step 1 · Source image" : "Project result"}</p>
             <h1 id="transformation-details-title" className="mt-2 truncate text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
-              {request?.name || sourceVideo.originalName}
+              {transformation.status === "ready" ? "Source ready" : request?.name || sourceImage.originalName}
             </h1>
-            <p className="mt-2 text-sm text-slate-400">Created {formatDate(transformation.createdAt)}</p>
+            <p className="mt-2 text-sm text-slate-400">{transformation.status === "ready" ? "Review your image, then configure its new visual direction." : `Created ${formatDate(transformation.createdAt)}`}</p>
           </div>
-          <span className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ring-1 ${statusClasses[transformation.status]}`}>
+          <span className={`inline-flex min-w-36 items-center justify-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ring-1 ${statusClasses[transformation.status]}`}>
             <span className={`size-1.5 rounded-full bg-current ${isActive ? "animate-pulse motion-reduce:animate-none" : ""}`} aria-hidden="true" />
             {statusLabels[transformation.status]}
           </span>
@@ -197,6 +293,13 @@ export default function TransformationDetails({
           </div>
         )}
 
+        {(isActive || isCompleted || transformation.status === "failed") && (
+          <TransformationProgress
+            status={transformation.status}
+            errorStage={transformation.error?.stage}
+          />
+        )}
+
         {transformation.error && (
           <div className="border-b border-rose-500/25 bg-rose-50/70 px-5 py-4 sm:px-6" role="alert">
             <div className="flex items-start gap-3">
@@ -206,7 +309,7 @@ export default function TransformationDetails({
                 <p className="mt-1.5 text-sm leading-6 text-rose-800">{transformation.error.message}</p>
                 {transformation.error.retryable && (
                   transformation.error.stage === "output" ? (
-                    <p className="mt-2 text-xs text-rose-700">The generated video is safe. Saving it will retry automatically.</p>
+                    <p className="mt-2 text-xs text-rose-700">The generated image is ready. Saving it will retry automatically.</p>
                   ) : (
                     <button type="button" onClick={() => void handleRetry()} disabled={isRetrying} className="mt-3 inline-flex min-h-9 items-center rounded-lg bg-rose-700 px-3 text-xs font-semibold text-white transition hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 disabled:cursor-not-allowed disabled:opacity-60">
                       {isRetrying ? "Preparing retry…" : "Retry transformation"}
@@ -219,30 +322,55 @@ export default function TransformationDetails({
           </div>
         )}
 
-        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <VideoPanel
-            label="Generated video"
-            description="AI-transformed result"
-            url={transformation.output?.url ?? null}
-            emptyTitle={isActive ? "Creating your result" : "No generated video yet"}
-            emptyDescription={isActive ? "You can leave this page while processing continues." : "The result will appear here after a successful transformation."}
-            linkLabel="Open result"
-            fileName={request?.name || "Generated result"}
-            fileMeta={isCompleted ? `Completed ${formatDate(transformation.completedAt ?? transformation.updatedAt)}` : statusLabels[transformation.status]}
-            isLoading={isActive}
-            isGenerated
-          />
-          <VideoPanel
-            label="Source video"
-            description="Original upload"
-            url={sourceVideo.url}
-            emptyTitle="Preview unavailable"
-            emptyDescription="The original file could not be previewed."
-            linkLabel="Open source"
-            fileName={sourceVideo.originalName}
-            fileMeta={`${sourceVideo.mimeType === "video/quicktime" ? "MOV" : "MP4"} · ${formatFileSize(sourceVideo.bytes)}`}
-          />
-        </div>
+        <div className="p-5 sm:p-6">
+          {transformation.status === "ready" ? (
+            <div className="grid grid-cols-[minmax(0,8rem)_1fr] gap-4 sm:grid-cols-[minmax(0,15rem)_1fr] sm:gap-5">
+              <button type="button" onClick={() => setIsSourcePreviewOpen(true)} className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-950 shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600">
+                {sourceImage.url ? <Image fill sizes="(max-width: 640px) 50vw, 30vw" src={sourceImage.url} alt={`Source image: ${sourceImage.originalName}`} className="object-contain" /> : <span className="flex size-full items-center justify-center text-slate-400">Preview unavailable</span>}
+              </button>
+              <div className="flex min-w-0 flex-col justify-center">
+                <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-300/50 bg-emerald-500/12 px-2.5 py-1 text-xs font-semibold text-emerald-200">
+                  <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                  Ready to configure
+                </span>
+                <p className="mt-3 truncate text-base font-semibold text-slate-950" title={sourceImage.originalName}>{sourceImage.originalName}</p>
+                <dl className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                  <div className="rounded-lg bg-slate-100 px-2.5 py-1.5"><dt className="sr-only">Format</dt><dd>{sourceImage.mimeType.split("/")[1]?.toUpperCase() ?? "Image"}</dd></div>
+                  <div className="rounded-lg bg-slate-100 px-2.5 py-1.5"><dt className="sr-only">File size</dt><dd>{formatFileSize(sourceImage.bytes)}</dd></div>
+                </dl>
+                <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-500">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" className="mt-0.5 size-4 shrink-0 text-emerald-600" aria-hidden="true"><path d="M6.5 9V6.75a3.5 3.5 0 0 1 7 0V9M5.5 9h9a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1Z" strokeLinecap="round" /></svg>
+                  Stored securely and ready to send to the transformation service.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <SourceImageListItem
+                url={sourceImage.url}
+                fileName={sourceImage.originalName}
+                fileMeta={`${sourceImage.mimeType.split("/")[1]?.toUpperCase() ?? "Image"} · ${formatFileSize(sourceImage.bytes)}`}
+                onPreview={() => setIsSourcePreviewOpen(true)}
+              />
+              {transformation.outputs.length > 0 && <div className="mt-5 grid min-w-0 gap-5">
+                {transformation.outputs.map((output, index) => (
+              <ImagePanel
+                key={output.url}
+                label={transformation.outputs.length === 1 ? "Generated image" : `Generated image ${index + 1}`}
+                description="AI-transformed result"
+                url={output.url}
+                emptyTitle="Preview unavailable"
+                emptyDescription="The generated image could not be previewed."
+                linkLabel="Open result"
+                fileName={request?.name || `Generated result ${index + 1}`}
+                fileMeta={`Result ${index + 1} of ${transformation.outputs.length}`}
+                isGenerated
+              />
+                ))}
+              </div>}
+            </>
+          )}
+          </div>
 
         {request && (
           <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-5 sm:px-6" aria-label="Transformation settings">
@@ -254,13 +382,11 @@ export default function TransformationDetails({
               {transformation.creditsCharged !== null && <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-500">{transformation.creditsCharged} credits</span>}
             </div>
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Clip</dt><dd className="mt-1.5 font-medium text-slate-700">{formatClip(request.startSeconds, request.endSeconds)}</dd></div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Visual style</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.artStyle}</dd></div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Frame rate</dt><dd className="mt-1.5 font-medium text-slate-700">{request.fpsResolution === "HALF" ? "Half" : request.fpsResolution === "FULL" ? "Full" : "Not specified"}</dd></div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Model</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.model ?? "Provider default"}</dd></div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Version</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.version?.toUpperCase() ?? "Provider default"}</dd></div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Prompt mode</dt><dd className="mt-1.5 font-medium text-slate-700">{request.style.promptType?.replaceAll("_", " ") ?? "Default"}</dd></div>
-              {request.style.prompt && <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 sm:col-span-2 lg:col-span-3"><dt className="text-xs text-slate-400">Creative prompt</dt><dd className="mt-1.5 leading-6 text-slate-600">{request.style.prompt}</dd></div>}
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Model</dt><dd className="mt-1.5 font-medium text-slate-700">{request.model ?? "Provider default"}</dd></div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Resolution</dt><dd className="mt-1.5 font-medium text-slate-700">{request.resolution ?? "Provider default"}</dd></div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Aspect ratio</dt><dd className="mt-1.5 font-medium text-slate-700">{request.aspectRatio ?? "Auto"}</dd></div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3"><dt className="text-xs text-slate-400">Images</dt><dd className="mt-1.5 font-medium text-slate-700">{request.imageCount ?? 1}</dd></div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 sm:col-span-2 lg:col-span-3"><dt className="text-xs text-slate-400">Edit prompt</dt><dd className="mt-1.5 leading-6 text-slate-600">{request.style.prompt}</dd></div>
             </dl>
           </div>
         )}
@@ -270,6 +396,21 @@ export default function TransformationDetails({
           {transformation.completedAt && <span>Completed {formatDate(transformation.completedAt)}</span>}
         </footer>
       </section>
+
+      {isSourcePreviewOpen && sourceImage.url && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8" role="dialog" aria-modal="true" aria-label="Source image preview">
+          <button type="button" className="absolute inset-0 bg-slate-950/75" onClick={() => setIsSourcePreviewOpen(false)} aria-label="Close source image preview" />
+          <div className="relative z-10 flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white p-4 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="truncate text-sm font-semibold text-slate-900">{sourceImage.originalName}</p>
+              <button type="button" onClick={() => setIsSourcePreviewOpen(false)} className="rounded-lg px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600">Close</button>
+            </div>
+            <div className="relative min-h-72 flex-1 bg-slate-950" style={{ height: "min(72vh, 48rem)" }}>
+              <Image fill sizes="100vw" src={sourceImage.url} alt="Source image preview" className="object-contain" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {transformation.status === "ready" && <TransformationForm transformationId={transformation.id} />}
     </>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 
 import type {
   TransformationHistoryItem,
@@ -12,7 +13,7 @@ import type {
   StatusTooltip,
 } from "@/components/TransformationHistory/TransformationHistory.types";
 import { transformationHistoryRefreshEvent } from "@/shared/browserEvents";
-import { getCloudinaryVideoThumbnailUrl } from "@/shared/cloudinaryMedia";
+import { getCloudinaryImageThumbnailUrl } from "@/shared/cloudinaryMedia";
 
 const historyPollIntervalMilliseconds = 4_500;
 
@@ -56,13 +57,13 @@ function isTransformationHistoryResponse(
     }
 
     const itemRecord = item as Record<string, unknown>;
-    const sourceVideo = itemRecord.sourceVideo;
+    const sourceImage = itemRecord.sourceImage;
 
     return (
       typeof itemRecord.id === "string" &&
       typeof itemRecord.status === "string" &&
-      sourceVideo !== null &&
-      typeof sourceVideo === "object"
+      sourceImage !== null &&
+      typeof sourceImage === "object"
     );
   });
 }
@@ -106,13 +107,9 @@ function formatDate(date: string) {
 }
 
 function getProjectContext(transformation: TransformationHistoryItem) {
-  if (transformation.request?.style.artStyle) {
-    return transformation.request.style.artStyle;
-  }
-
-  return transformation.sourceVideo.mimeType.startsWith("video/")
-    ? "Source video"
-    : "Video project";
+  return transformation.request?.model && transformation.request.model !== "default"
+    ? transformation.request.model
+    : "Image project";
 }
 
 function getStatusClasses(status: TransformationHistoryStatus) {
@@ -149,10 +146,31 @@ export default function TransformationHistory({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<TransformationHistoryFilter>("all");
   const [statusTooltip, setStatusTooltip] = useState<StatusTooltip | null>(null);
+  const [isHistoryListScrolling, setIsHistoryListScrolling] = useState(false);
   const isMountedRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const inFlightRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const scrollEndTimeoutRef = useRef<number | null>(null);
+
+  const handleHistoryListScroll = useCallback(() => {
+    setIsHistoryListScrolling(true);
+
+    if (scrollEndTimeoutRef.current !== null) {
+      window.clearTimeout(scrollEndTimeoutRef.current);
+    }
+
+    scrollEndTimeoutRef.current = window.setTimeout(() => {
+      setIsHistoryListScrolling(false);
+      scrollEndTimeoutRef.current = null;
+    }, 700);
+  }, []);
+
+  useEffect(() => () => {
+    if (scrollEndTimeoutRef.current !== null) {
+      window.clearTimeout(scrollEndTimeoutRef.current);
+    }
+  }, []);
 
   const showStatusTooltip = useCallback((
     target: HTMLElement,
@@ -276,7 +294,7 @@ export default function TransformationHistory({
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const visibleTransformations = transformations.filter((transformation) => {
-    const name = transformation.request?.name || transformation.sourceVideo.originalName;
+    const name = transformation.request?.name || transformation.sourceImage.originalName;
     const matchesSearch = name.toLowerCase().includes(normalizedSearchQuery);
     const matchesStatus =
       statusFilter === "all" ||
@@ -295,7 +313,7 @@ export default function TransformationHistory({
             Recent projects
           </h2>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            {transformations.length === 0 ? "Your video transformations." : `${transformations.length} saved ${transformations.length === 1 ? "project" : "projects"}`}
+            {transformations.length === 0 ? "Your image transformations." : `${transformations.length} saved ${transformations.length === 1 ? "project" : "projects"}`}
           </p>
         </div>
         <button
@@ -356,7 +374,10 @@ export default function TransformationHistory({
         ))}
       </div>
 
-      <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+      <div
+        className={`history-scroll-area mt-4 min-h-0 flex-1 overflow-y-auto pr-2 ${isHistoryListScrolling ? "history-scroll-area--active" : ""}`}
+        onScroll={handleHistoryListScroll}
+      >
       {isInitialLoading && (
         <div className="space-y-2" role="status" aria-label="Loading transformation history">
           {[0, 1, 2].map((item) => (
@@ -395,8 +416,8 @@ export default function TransformationHistory({
       {visibleTransformations.length > 0 && (
         <div className="space-y-1.5" aria-live="polite">
           {visibleTransformations.map((transformation) => {
-            const thumbnailUrl = getCloudinaryVideoThumbnailUrl(
-              transformation.output?.url ?? transformation.sourceVideo.url,
+            const thumbnailUrl = getCloudinaryImageThumbnailUrl(
+              transformation.outputs[0]?.url ?? transformation.sourceImage.url,
             );
 
             return (
@@ -418,24 +439,23 @@ export default function TransformationHistory({
                 <span className={`relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg ${transformation.status === "failed" ? "bg-rose-100 text-rose-500" : transformation.status === "completed" ? "bg-emerald-100 text-emerald-600" : "bg-violet-100 text-violet-600"}`}>
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-5" aria-hidden="true">
                     <rect x="3" y="4" width="14" height="12" rx="2" />
-                    <path d="M8.5 7.5 12 10l-3.5 2.5v-5Z" fill="currentColor" stroke="none" />
+                    <path d="m6 13 2.5-2.5 2 2L13 10l2 3" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   {thumbnailUrl && (
                     // Cloudinary already delivers this thumbnail at its display size.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={thumbnailUrl}
                       alt=""
-                      loading="lazy"
-                      decoding="async"
+                      fill
+                      sizes="40px"
+                      unoptimized
                       className="absolute inset-0 size-full object-cover"
-                      onError={(event) => event.currentTarget.remove()}
                     />
                   )}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-slate-900">
-                    {transformation.request?.name || transformation.sourceVideo.originalName}
+                    {transformation.request?.name || transformation.sourceImage.originalName}
                   </span>
                   <span className="mt-1 block truncate text-xs text-slate-400">
                     {getProjectContext(transformation)} · {formatDate(transformation.createdAt)}

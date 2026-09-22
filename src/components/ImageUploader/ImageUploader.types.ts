@@ -6,7 +6,7 @@ export type UploadcareUploadingEntry = OutputFileEntry<"uploading">;
 export type UploadcareSuccessEntry = OutputFileEntry<"success">;
 export type UploadcareFailedEntry = OutputFileEntry<"failed">;
 
-export interface PreparedSourceVideo {
+export interface PreparedSourceImage {
   url: string;
   originalName: string;
   mimeType: string;
@@ -17,6 +17,10 @@ export interface UploadApiResponse {
   transformation: {
     id: string;
     status: "ready";
-    sourceVideo: PreparedSourceVideo;
+    sourceImage: PreparedSourceImage;
   };
+}
+
+export interface ImageUploaderProps {
+  onTransformationQueued?: (transformationId: string) => void;
 }

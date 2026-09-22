@@ -1,36 +1,35 @@
 const cloudinaryHost = "res.cloudinary.com";
-const videoUploadPath = "/video/upload/";
+const imageUploadPath = "/image/upload/";
 const thumbnailTransformation =
-  "c_fill,g_auto,h_96,q_auto,so_auto,w_96";
+  "c_fill,g_auto,h_96,q_auto,w_96";
 
-export function getCloudinaryVideoThumbnailUrl(videoUrl: string | null) {
-  if (!videoUrl) {
+export function getCloudinaryImageThumbnailUrl(imageUrl: string | null) {
+  if (!imageUrl) {
     return null;
   }
 
   try {
-    const url = new URL(videoUrl);
+    const url = new URL(imageUrl);
 
     if (url.protocol !== "https:" || url.hostname !== cloudinaryHost) {
       return null;
     }
 
-    const uploadPathIndex = url.pathname.indexOf(videoUploadPath);
+    const uploadPathIndex = url.pathname.indexOf(imageUploadPath);
 
     if (uploadPathIndex === -1) {
       return null;
     }
 
-    const assetPathStart = uploadPathIndex + videoUploadPath.length;
+    const assetPathStart = uploadPathIndex + imageUploadPath.length;
     const assetPath = url.pathname.slice(assetPathStart);
-    const thumbnailAssetPath = assetPath.replace(/\.[^./]+$/, ".jpg");
 
-    if (!assetPath || thumbnailAssetPath === assetPath) {
+    if (!assetPath) {
       return null;
     }
 
-    // Cloudinary extracts a representative video frame as a small image.
-    url.pathname = `${url.pathname.slice(0, assetPathStart)}${thumbnailTransformation}/${thumbnailAssetPath}`;
+    // Cloudinary serves a small, cropped version of the uploaded image.
+    url.pathname = `${url.pathname.slice(0, assetPathStart)}${thumbnailTransformation}/${assetPath}`;
 
     return url.toString();
   } catch {

@@ -5,10 +5,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import TransformationDetails from "@/components/TransformationDetails/TransformationDetails";
 import TransformationHistory from "@/components/TransformationHistory/TransformationHistory";
 import type { TransformationHistoryItem } from "@/components/TransformationHistory/TransformationHistory.types";
-import VideoUploader from "@/components/VideoUploader/VideoUploader";
+import ImageUploader from "@/components/ImageUploader/ImageUploader";
 
 export default function Home() {
   const [selectedTransformation, setSelectedTransformation] = useState<TransformationHistoryItem | null>(null);
+  const [pendingTransformationId, setPendingTransformationId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
@@ -72,6 +73,16 @@ export default function Home() {
     setIsHistoryDrawerOpen(false);
   }, []);
   const handleTransformationsChange = useCallback((transformations: TransformationHistoryItem[]) => {
+    const queuedTransformation = pendingTransformationId
+      ? transformations.find((transformation) => transformation.id === pendingTransformationId)
+      : null;
+
+    if (queuedTransformation) {
+      setSelectedTransformation(queuedTransformation);
+      setPendingTransformationId(null);
+      return;
+    }
+
     setSelectedTransformation((currentSelection) => {
       if (!currentSelection) {
         return currentSelection;
@@ -79,6 +90,10 @@ export default function Home() {
 
       return transformations.find((transformation) => transformation.id === currentSelection.id) ?? null;
     });
+  }, [pendingTransformationId]);
+  const handleTransformationQueued = useCallback((transformationId: string) => {
+    setPendingTransformationId(transformationId);
+    setIsCreatingNew(false);
   }, []);
   const handleStartNewTransformation = useCallback(() => {
     setSelectedTransformation(null);
@@ -87,7 +102,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="dark-app min-h-screen bg-[#09090f] text-slate-100 lg:flex">
+    <main className="dark-app min-h-[100dvh] bg-[#09090f] text-slate-100 lg:flex">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-[#0c0c14]/95 px-4 backdrop-blur lg:hidden">
         <button
           ref={historyButtonRef}
@@ -139,7 +154,7 @@ export default function Home() {
             <span className="flex size-9 items-center justify-center rounded-xl bg-violet-600 text-sm font-bold text-white shadow-sm shadow-violet-200">F</span>
             <div>
               <p id="history-sidebar-brand" className="text-sm font-semibold tracking-tight text-slate-950">FrameShift</p>
-              <p className="text-xs text-slate-500">Video studio</p>
+              <p className="text-xs text-slate-500">Image studio</p>
             </div>
           </div>
           <button
@@ -163,7 +178,7 @@ export default function Home() {
         />
       </aside>
 
-      <section className="min-w-0 flex-1 px-4 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-14 xl:px-16">
+      <section className="min-w-0 flex-1 px-4 pb-72 pt-8 sm:px-8 sm:pb-72 sm:pt-10 lg:px-12 lg:pb-72 lg:pt-14 xl:px-16">
         <div className="mx-auto w-full max-w-5xl">
           {selectedTransformation ? (
             <TransformationDetails transformation={selectedTransformation} />
@@ -175,14 +190,14 @@ export default function Home() {
                     New transformation
                   </p>
                   <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                    Start with your source video
+                    Start with your source image
                   </h1>
                 </div>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">
-                  Upload a source video to create a new visual direction with AI.
+                  Upload a source image to create a new visual direction with AI.
                 </p>
               </section>
-              <VideoUploader />
+              <ImageUploader onTransformationQueued={handleTransformationQueued} />
             </>
           )}
         </div>

@@ -3,33 +3,29 @@ export interface MagicHourWebhookHeaders {
   timestamp: string | null;
 }
 
-export interface MagicHourVideoEventPayload {
+export interface MagicHourImageEventPayload {
   id: string;
   status: string;
   creditsCharged?: number;
 }
 
-export interface MagicHourVideoCompletedEventPayload
-  extends MagicHourVideoEventPayload {
+export interface MagicHourImageCompletedEventPayload extends MagicHourImageEventPayload {
   downloads: Array<{ url: string }>;
 }
 
-export interface MagicHourVideoStartedEvent {
-  type: "video.started";
-  payload: MagicHourVideoEventPayload;
+export interface MagicHourImageStartedEvent {
+  type: "image.started";
+  payload: MagicHourImageEventPayload;
 }
 
-export interface MagicHourVideoCompletedEvent {
-  type: "video.completed";
-  payload: MagicHourVideoCompletedEventPayload;
+export interface MagicHourImageCompletedEvent {
+  type: "image.completed";
+  payload: MagicHourImageCompletedEventPayload;
 }
 
-export interface MagicHourVideoErroredEvent {
-  type: "video.errored";
-  payload: MagicHourVideoEventPayload;
+export interface MagicHourImageErroredEvent {
+  type: "image.errored";
+  payload: MagicHourImageEventPayload;
 }
 
-export type MagicHourVideoEvent =
-  | MagicHourVideoStartedEvent
-  | MagicHourVideoCompletedEvent
-  | MagicHourVideoErroredEvent;
+export type MagicHourImageEvent = MagicHourImageStartedEvent | MagicHourImageCompletedEvent | MagicHourImageErroredEvent;

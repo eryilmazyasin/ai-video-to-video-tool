@@ -1,10 +1,11 @@
 import type { TransformationHistoryItem } from "@/components/TransformationHistory/TransformationHistory.types";
+import type { TransformationHistoryStatus } from "@/components/TransformationHistory/TransformationHistory.types";
 
 export interface TransformationDetailsProps {
   transformation: TransformationHistoryItem;
 }
 
-export interface TransformationVideoPanelProps {
+export interface TransformationImagePanelProps {
   label: string;
   description: string;
   url: string | null;
@@ -15,4 +16,16 @@ export interface TransformationVideoPanelProps {
   fileMeta: string;
   isLoading?: boolean;
   isGenerated?: boolean;
+}
+
+export interface SourceImageListItemProps {
+  url: string | null;
+  fileName: string;
+  fileMeta: string;
+  onPreview: () => void;
+}
+
+export interface TransformationProgressProps {
+  status: TransformationHistoryStatus;
+  errorStage?: "upload" | "submission" | "processing" | "output";
 }

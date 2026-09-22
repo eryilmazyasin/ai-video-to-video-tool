@@ -1,5 +1,5 @@
 import type { ObjectId } from "mongodb";
-import type { V1VideoToVideoCreateBody } from "magic-hour/types";
+import type { V1AiImageEditorCreateBody } from "magic-hour/types";
 
 export const transformationStatuses = [
   "staging",
@@ -44,10 +44,9 @@ export type ReadyTransformationProvider = Pick<
   inputFilePath: string;
 };
 
-// Deprecated width and height do not affect the current provider output.
 export type TransformationRequest = Omit<
-  V1VideoToVideoCreateBody,
-  "assets" | "height" | "width"
+  V1AiImageEditorCreateBody,
+  "assets"
 >;
 
 export interface TransformationOutput {
@@ -55,7 +54,8 @@ export interface TransformationOutput {
   cloudinaryUrl: string;
 }
 
-export interface CompleteTransformationOutputInput extends TransformationOutput {
+export interface CompleteTransformationOutputInput {
+  outputs: TransformationOutput[];
   rawStatus: string;
   creditsCharged?: number;
 }
@@ -75,6 +75,7 @@ export interface TransformationDocument {
   provider: TransformationProvider;
   request?: TransformationRequest;
   output?: TransformationOutput;
+  outputs?: TransformationOutput[];
   error?: TransformationError;
   createdAt: Date;
   updatedAt: Date;

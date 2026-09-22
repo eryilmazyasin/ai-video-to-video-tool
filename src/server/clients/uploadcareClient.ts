@@ -60,7 +60,7 @@ function normalizeFileInfo(file: FileInfo): UploadcareFileInfo {
     mimeType: file.mimeType,
     originalFilename: file.originalFilename,
     originalFileUrl,
-    // file.url is the REST endpoint, so use the original CDN URL for video bytes.
+    // file.url is the REST endpoint, so use the original CDN URL for image bytes.
     cdnUrl: originalFileUrl,
     isReady: file.isReady,
     isStored: Boolean(file.datetimeStored),

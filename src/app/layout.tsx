@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Video-to-Video Tool",
-  description: "Transform videos with AI.",
+  title: "AI Image-to-Image Tool",
+  description: "Transform images with AI.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

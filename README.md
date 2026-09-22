@@ -1,6 +1,6 @@
-# AI Video-to-Video Transformation Tool
+# AI Image-to-Image Transformation Tool
 
-A full-stack case study that transforms a source video with Magic Hour AI. Users upload a video, choose transformation settings, and follow the result while it is processed in the background.
+A full-stack case study that transforms one source image with Magic Hour AI. Users upload an image, choose generation settings, and follow the result while it is processed in the background.
 
 ## Live demo
 
@@ -8,13 +8,13 @@ A full-stack case study that transforms a source video with Magic Hour AI. Users
 
 ## What it does
 
-- Uploads MP4 and MOV source videos with Uploadcare
-- Validates video type and a 50 MB size limit
-- Stores source and generated videos in Cloudinary
-- Sends the selected settings to Magic Hour's video-to-video model
+- Uploads one JPEG, PNG or WebP source image with Uploadcare
+- Validates image type and a 20 MB size limit
+- Stores source and generated images in Cloudinary
+- Sends the selected prompt and image settings to Magic Hour's image editor
 - Receives asynchronous Magic Hour updates through a signed webhook
 - Saves each transformation and its status in MongoDB
-- Shows project history, processing states, errors, source videos, and generated videos
+- Shows project history, processing states, errors, source images, and generated images
 - Works on desktop and mobile layouts
 
 ## Tech stack
@@ -28,22 +28,22 @@ A full-stack case study that transforms a source video with Magic Hour AI. Users
 
 ## How the flow works
 
-1. The user uploads a video to Uploadcare from the browser.
+1. The user uploads one image to Uploadcare from the browser.
 2. `POST /api/upload` checks the file and copies it to Cloudinary.
 3. A new transformation record is saved in MongoDB with the `ready` status.
-4. The user chooses clip, style, frame rate, model, version, and prompt settings.
+4. The user chooses a model, resolution, aspect ratio, result count and edit prompt.
 5. `POST /api/transform` creates a Magic Hour job and changes the record to `queued`.
 6. Magic Hour calls `POST /api/webhook` as the job progresses.
-7. When processing is complete, the generated video is copied to Cloudinary and MongoDB is updated.
+7. When processing is complete, the generated image or images are copied to Cloudinary and MongoDB is updated.
 8. The history view refreshes automatically while the page is open.
 
 ## API endpoints
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `POST` | `/api/upload` | Validates an Uploadcare video and stores the source in Cloudinary. |
+| `POST` | `/api/upload` | Validates an Uploadcare image and stores the source in Cloudinary. |
 | `POST` | `/api/transform` | Sends the selected settings to Magic Hour. |
-| `POST` | `/api/webhook` | Receives Magic Hour job events and saves the generated video. |
+| `POST` | `/api/webhook` | Receives Magic Hour image events and saves generated images. |
 | `GET` | `/api/history` | Returns the current browser's transformation history. |
 
 ## Run locally
@@ -54,7 +54,7 @@ Requirements:
 - MongoDB Atlas account
 - Cloudinary account
 - Uploadcare project
-- Magic Hour account with video-to-video credits
+- Magic Hour account with image editor credits
 
 Install dependencies and create your local environment file:
 
@@ -108,14 +108,14 @@ Copy the webhook signing secret from Magic Hour into `MAGIC_HOUR_WEBHOOK_SECRET`
 
 ## Error handling and security
 
-- Only MP4 and MOV files up to 50 MB are accepted.
+- Only JPEG, PNG and WebP files up to 20 MB are accepted.
 - The server checks Uploadcare file details again before storage.
 - API keys and database credentials stay on the server.
 - Webhook signatures are checked before processing provider events.
 - Invalid API input and provider failures show safe user-facing error messages.
-- Duplicate webhook events do not create duplicate generated videos.
+- Duplicate webhook events do not create duplicate generated images.
 
 ## Notes
 
 - This case study uses an anonymous browser cookie to keep each browser's history separate. It is not a full authentication system.
-- Video transformations can consume Magic Hour credits. Short test clips are recommended during development.
+- Image generations can consume Magic Hour credits. Use a single result while testing.

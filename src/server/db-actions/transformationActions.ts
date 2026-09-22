@@ -176,6 +176,7 @@ export async function resetRetryableTransformation(
         "provider.rawStatus": "",
         "provider.creditsCharged": "",
         output: "",
+        outputs: "",
         completedAt: "",
       },
     },
@@ -262,10 +263,7 @@ export async function markCompletedFromOutput(
     {
       $set: {
         status: "completed",
-        output: {
-          cloudinaryPublicId: output.cloudinaryPublicId,
-          cloudinaryUrl: output.cloudinaryUrl,
-        },
+        outputs: output.outputs,
         "provider.rawStatus": output.rawStatus,
         ...(output.creditsCharged !== undefined
           ? { "provider.creditsCharged": output.creditsCharged }
@@ -273,7 +271,7 @@ export async function markCompletedFromOutput(
         completedAt: now,
         updatedAt: now,
       },
-      $unset: { error: "" },
+      $unset: { error: "", output: "" },
     },
     { returnDocument: "after" },
   );
@@ -293,7 +291,7 @@ export async function markOutputCopyFailed(
         error: {
           stage: "output",
           code: "output_copy_failed",
-          message: "The generated video could not be saved. Retrying automatically.",
+          message: "The generated image could not be saved. Retrying automatically.",
           retryable: true,
         },
         updatedAt: now,

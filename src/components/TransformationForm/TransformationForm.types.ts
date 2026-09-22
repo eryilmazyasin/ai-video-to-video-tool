@@ -1,39 +1,4 @@
-import type {
-  VideoToVideoArtStyle,
-  VideoToVideoModel,
-  VideoToVideoPromptType,
-  VideoToVideoVersion,
-} from "@/shared/videoToVideoOptions";
+import type { imageToImageAspectRatios, imageToImageModels, imageToImageResolutions } from "@/shared/imageToImageOptions";
 
-export interface TransformationFormProps {
-  transformationId: string;
-}
-
-export interface TransformationFormValues {
-  name: string;
-  startSeconds: string;
-  endSeconds: string;
-  fpsResolution: "FULL" | "HALF";
-  artStyle: VideoToVideoArtStyle;
-  model: VideoToVideoModel;
-  promptType: VideoToVideoPromptType;
-  prompt: string;
-  version: VideoToVideoVersion;
-}
-
-export type TransformationFormField =
-  | "name"
-  | "startSeconds"
-  | "endSeconds"
-  | "prompt";
-
-export type TransformationFormErrors = Partial<
-  Record<TransformationFormField, string>
->;
-
-export interface TransformationApiResponse {
-  transformation: {
-    id: string;
-    status: "queued";
-  };
-}
+export interface TransformationFormProps { transformationId: string; onQueued?: (transformationId: string) => void; }
+export interface TransformationFormValues { name: string; prompt: string; model: (typeof imageToImageModels)[number]; resolution: (typeof imageToImageResolutions)[number]; aspectRatio: (typeof imageToImageAspectRatios)[number]; imageCount: 1 | 4 | 9 | 16; }

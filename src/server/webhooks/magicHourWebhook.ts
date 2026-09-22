@@ -5,11 +5,11 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
 import type {
-  MagicHourVideoCompletedEvent,
-  MagicHourVideoErroredEvent,
-  MagicHourVideoEvent,
-  MagicHourVideoEventPayload,
-  MagicHourVideoStartedEvent,
+  MagicHourImageCompletedEvent,
+  MagicHourImageErroredEvent,
+  MagicHourImageEvent,
+  MagicHourImageEventPayload,
+  MagicHourImageStartedEvent,
   MagicHourWebhookHeaders,
 } from "@/server/webhooks/magicHourWebhook.types";
 
@@ -18,7 +18,7 @@ const webhookTimestampToleranceSeconds = 300;
 const hexSignaturePattern = /^[a-f\d]{64}$/i;
 const unixTimestampPattern = /^\d{1,12}$/;
 
-const videoEventPayloadSchema = z
+const imageEventPayloadSchema = z
   .object({
     id: z.string().min(1).max(128),
     status: z.string().min(1).max(100),
@@ -26,20 +26,20 @@ const videoEventPayloadSchema = z
   })
   .passthrough();
 
-const videoStartedEventSchema = z.object({
-  type: z.literal("video.started"),
-  payload: videoEventPayloadSchema,
+const imageStartedEventSchema = z.object({
+  type: z.literal("image.started"),
+  payload: imageEventPayloadSchema,
 });
 
-const videoErroredEventSchema = z.object({
-  type: z.literal("video.errored"),
-  payload: videoEventPayloadSchema,
+const imageErroredEventSchema = z.object({
+  type: z.literal("image.errored"),
+  payload: imageEventPayloadSchema,
 });
 
-const videoCompletedEventSchema = z.object({
-  type: z.literal("video.completed"),
-  payload: videoEventPayloadSchema.extend({
-    downloads: z.array(z.object({ url: z.string().min(1).max(2_048) })).min(1),
+const imageCompletedEventSchema = z.object({
+  type: z.literal("image.completed"),
+  payload: imageEventPayloadSchema.extend({
+    downloads: z.array(z.object({ url: z.string().min(1).max(2_048) })).min(1).max(16),
   }),
 });
 
@@ -47,9 +47,7 @@ const eventEnvelopeSchema = z
   .object({ type: z.string().min(1).max(100), payload: z.unknown().optional() })
   .passthrough();
 
-function toVideoEventPayload(
-  payload: z.infer<typeof videoEventPayloadSchema>,
-): MagicHourVideoEventPayload {
+function toImageEventPayload(payload: z.infer<typeof imageEventPayloadSchema>): MagicHourImageEventPayload {
   return {
     id: payload.id,
     status: payload.status,
@@ -162,58 +160,52 @@ export function parseMagicHourWebhookEvent(rawBody: string) {
     return null;
   }
 
-  if (envelope.data.type === "video.started") {
-    const event = videoStartedEventSchema.safeParse(envelope.data);
+  if (envelope.data.type === "image.started") {
+    const event = imageStartedEventSchema.safeParse(envelope.data);
 
     return event.success
       ? ({
           type: event.data.type,
-          payload: toVideoEventPayload(event.data.payload),
-        } satisfies MagicHourVideoStartedEvent)
+          payload: toImageEventPayload(event.data.payload),
+        } satisfies MagicHourImageStartedEvent)
       : null;
   }
 
-  if (envelope.data.type === "video.errored") {
-    const event = videoErroredEventSchema.safeParse(envelope.data);
+  if (envelope.data.type === "image.errored") {
+    const event = imageErroredEventSchema.safeParse(envelope.data);
 
     return event.success
       ? ({
           type: event.data.type,
-          payload: toVideoEventPayload(event.data.payload),
-        } satisfies MagicHourVideoErroredEvent)
+          payload: toImageEventPayload(event.data.payload),
+        } satisfies MagicHourImageErroredEvent)
       : null;
   }
 
-  if (envelope.data.type === "video.completed") {
-    const event = videoCompletedEventSchema.safeParse(envelope.data);
+  if (envelope.data.type === "image.completed") {
+    const event = imageCompletedEventSchema.safeParse(envelope.data);
 
     return event.success
       ? ({
           type: event.data.type,
           payload: {
-            ...toVideoEventPayload(event.data.payload),
+            ...toImageEventPayload(event.data.payload),
             downloads: event.data.payload.downloads.map((download) => ({
               url: download.url,
             })),
           },
-        } satisfies MagicHourVideoCompletedEvent)
+        } satisfies MagicHourImageCompletedEvent)
       : null;
   }
 
-  return envelope.data.type as Exclude<string, MagicHourVideoEvent["type"]>;
+  return envelope.data.type as Exclude<string, MagicHourImageEvent["type"]>;
 }
 
-export function getFirstHttpsDownloadUrl(event: MagicHourVideoCompletedEvent) {
-  const firstDownloadUrl = event.payload.downloads[0]?.url;
-
-  if (!firstDownloadUrl) {
-    return null;
-  }
+export function getHttpsDownloadUrls(event: MagicHourImageCompletedEvent) {
+  const urls = event.payload.downloads.map((download) => download.url);
 
   try {
-    return new URL(firstDownloadUrl).protocol === "https:"
-      ? firstDownloadUrl
-      : null;
+    return urls.every((url) => new URL(url).protocol === "https:") ? urls : null;
   } catch {
     return null;
   }

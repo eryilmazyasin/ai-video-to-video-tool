@@ -4,20 +4,22 @@ import { FileUploaderMinimal } from "@uploadcare/react-uploader/next";
 import type { UploadCtxProvider } from "@uploadcare/file-uploader";
 import "@uploadcare/react-uploader/core.css";
 import { useCallback, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
+import Image from "next/image";
 
 import TransformationForm from "@/components/TransformationForm/TransformationForm";
 import type {
-  PreparedSourceVideo,
+  PreparedSourceImage,
   UploadApiResponse,
   UploadcareFailedEntry,
   UploadcareSuccessEntry,
   UploadcareUploadingEntry,
   UploadStage,
-} from "@/components/VideoUploader/VideoUploader.types";
+  ImageUploaderProps,
+} from "@/components/ImageUploader/ImageUploader.types";
 import { transformationHistoryRefreshEvent } from "@/shared/browserEvents";
 
-const maximumVideoSizeBytes = 50 * 1024 * 1024;
-const videoAcceptTypes = "video/mp4,video/quicktime,.mp4,.mov";
+const maximumImageSizeBytes = 20 * 1024 * 1024;
+const imageAcceptTypes = "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp";
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024 * 1024) {
@@ -30,7 +32,7 @@ function formatFileSize(bytes: number) {
 function getUploadcareErrorMessage(entry: UploadcareFailedEntry) {
   const message = entry.errors[0]?.message;
 
-  return message || "Uploadcare could not upload this video. Please try again.";
+  return message || "Uploadcare could not upload this image. Please try again.";
 }
 
 function isUploadApiResponse(value: unknown): value is UploadApiResponse {
@@ -44,21 +46,21 @@ function isUploadApiResponse(value: unknown): value is UploadApiResponse {
     return false;
   }
 
-  const sourceVideo = (transformation as Record<string, unknown>).sourceVideo;
+  const sourceImage = (transformation as Record<string, unknown>).sourceImage;
 
   return Boolean(
-    sourceVideo &&
-      typeof sourceVideo === "object" &&
+    sourceImage &&
+      typeof sourceImage === "object" &&
       typeof (transformation as Record<string, unknown>).id === "string" &&
       (transformation as Record<string, unknown>).status === "ready" &&
-      typeof (sourceVideo as Record<string, unknown>).url === "string" &&
-      typeof (sourceVideo as Record<string, unknown>).originalName === "string" &&
-      typeof (sourceVideo as Record<string, unknown>).mimeType === "string" &&
-      typeof (sourceVideo as Record<string, unknown>).bytes === "number",
+      typeof (sourceImage as Record<string, unknown>).url === "string" &&
+      typeof (sourceImage as Record<string, unknown>).originalName === "string" &&
+      typeof (sourceImage as Record<string, unknown>).mimeType === "string" &&
+      typeof (sourceImage as Record<string, unknown>).bytes === "number",
   );
 }
 
-export default function VideoUploader() {
+export default function ImageUploader({ onTransformationQueued }: ImageUploaderProps) {
   const publicKey = process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY;
   const uploaderRef = useRef<UploadCtxProvider>(null);
   const completedUuidsRef = useRef(new Set<string>());
@@ -70,11 +72,11 @@ export default function VideoUploader() {
   const [uploadedEntry, setUploadedEntry] = useState<UploadcareSuccessEntry | null>(
     null,
   );
-  const [sourceVideo, setSourceVideo] = useState<PreparedSourceVideo | null>(null);
+  const [sourceImage, setSourceImage] = useState<PreparedSourceImage | null>(null);
   const [transformationId, setTransformationId] = useState<string | null>(null);
   const [isDropSurfaceActive, setIsDropSurfaceActive] = useState(false);
 
-  const prepareSourceVideo = useCallback(async (entry: UploadcareSuccessEntry) => {
+  const prepareSourceImage = useCallback(async (entry: UploadcareSuccessEntry) => {
     const { uuid } = entry;
 
     if (completedUuidsRef.current.has(uuid) || inFlightUuidRef.current === uuid) {
@@ -99,18 +101,18 @@ export default function VideoUploader() {
         const apiError =
           body && typeof body === "object" && typeof (body as Record<string, unknown>).error === "string"
             ? (body as Record<string, string>).error
-            : "The video could not be prepared. Please try again.";
+            : "The image could not be prepared. Please try again.";
         throw new Error(apiError);
       }
 
       if (!isUploadApiResponse(body)) {
-        throw new Error("The video was prepared, but the server response was incomplete.");
+        throw new Error("The image was prepared, but the server response was incomplete.");
       }
 
       completedUuidsRef.current.add(uuid);
 
       if (selectedUuidRef.current === uuid) {
-        setSourceVideo(body.transformation.sourceVideo);
+        setSourceImage(body.transformation.sourceImage);
         setTransformationId(body.transformation.id);
         setStage("ready");
         window.dispatchEvent(new Event(transformationHistoryRefreshEvent));
@@ -121,7 +123,7 @@ export default function VideoUploader() {
         setError(
           requestError instanceof Error
             ? requestError.message
-            : "The video could not be prepared. Please try again.",
+            : "The image could not be prepared. Please try again.",
         );
       }
     } finally {
@@ -137,7 +139,7 @@ export default function VideoUploader() {
     setProgress(0);
     setError(null);
     setUploadedEntry(null);
-    setSourceVideo(null);
+    setSourceImage(null);
     setTransformationId(null);
   }, []);
 
@@ -155,9 +157,9 @@ export default function VideoUploader() {
     (entry: UploadcareSuccessEntry) => {
       setUploadedEntry(entry);
       setProgress(100);
-      void prepareSourceVideo(entry);
+      void prepareSourceImage(entry);
     },
-    [prepareSourceVideo],
+    [prepareSourceImage],
   );
 
   const handleUploadFailed = useCallback((entry: UploadcareFailedEntry) => {
@@ -167,11 +169,11 @@ export default function VideoUploader() {
 
   const retryPreparation = useCallback(() => {
     if (uploadedEntry) {
-      void prepareSourceVideo(uploadedEntry);
+      void prepareSourceImage(uploadedEntry);
     }
-  }, [prepareSourceVideo, uploadedEntry]);
+  }, [prepareSourceImage, uploadedEntry]);
 
-  const replaceSourceVideo = useCallback(() => {
+  const replaceSourceImage = useCallback(() => {
     const uploaderApi = uploaderRef.current?.getAPI();
 
     uploaderApi?.removeAllFiles();
@@ -180,7 +182,7 @@ export default function VideoUploader() {
     setProgress(0);
     setError(null);
     setUploadedEntry(null);
-    setSourceVideo(null);
+    setSourceImage(null);
     setTransformationId(null);
 
     window.setTimeout(() => uploaderApi?.openSystemDialog(), 0);
@@ -230,12 +232,12 @@ export default function VideoUploader() {
     );
   }
 
-  const isReady = stage === "ready" && sourceVideo;
+  const isReady = stage === "ready" && sourceImage;
   const showUploader = stage === "idle" || (stage === "error" && !uploadedEntry);
 
   return (
     <>
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60" aria-labelledby="source-video-title">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60" aria-labelledby="source-image-title">
         <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
           <div className="flex items-start gap-3">
             <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold ${isReady ? "bg-emerald-100 text-emerald-700" : "bg-violet-100 text-violet-700"}`}>
@@ -247,20 +249,20 @@ export default function VideoUploader() {
             </span>
             <div>
               <p className="text-xs font-semibold tracking-[0.12em] text-violet-700 uppercase">
-                Step 1 · Source video
+                Step 1 · Source image
               </p>
-              <h2 id="source-video-title" className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
-                {isReady ? "Source ready" : "Add your source video"}
+              <h2 id="source-image-title" className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
+                {isReady ? "Source ready" : "Add your source image"}
               </h2>
               <p className="mt-1 max-w-xl text-sm leading-6 text-slate-600">
                 {isReady
-                  ? "Review the selected video, then configure its new visual direction."
-                  : "Choose the video you want to transform. We’ll prepare a secure copy before generation."}
+                  ? "Review the selected image, then configure its new visual direction."
+                  : "Choose the image you want to transform. We’ll prepare a secure copy before generation."}
               </p>
             </div>
           </div>
           <span className="ml-12 w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 sm:ml-0">
-            MP4 or MOV · Max 50 MB
+            JPEG, PNG or WebP · Max 20 MB
           </span>
         </div>
 
@@ -270,7 +272,7 @@ export default function VideoUploader() {
               className={`ai-upload-scene relative isolate min-h-60 cursor-pointer overflow-hidden rounded-2xl border border-dashed p-5 text-center transition sm:min-h-64 sm:p-7 ${isDropSurfaceActive ? "border-violet-300" : "border-violet-400/45 hover:border-violet-300/80"}`}
               role="button"
               tabIndex={0}
-              aria-label="Choose a source video"
+              aria-label="Choose a source image"
               onClick={openFileDialog}
               onKeyDown={handleUploadSurfaceKeyDown}
               onDragEnter={(event) => {
@@ -290,8 +292,8 @@ export default function VideoUploader() {
             >
               <svg viewBox="0 0 180 140" className="pointer-events-none absolute -left-5 top-1/2 h-40 w-52 -translate-y-1/2 text-violet-300/15" fill="none" aria-hidden="true">
                 <rect x="18" y="31" width="90" height="63" rx="8" stroke="currentColor" strokeWidth="2" transform="rotate(-14 18 31)" />
-                <path d="m55 49 23 13-23 13V49Z" fill="currentColor" />
-                <path d="M24 44 40 40m-21 16 16-4m55 23 16-4m-21 16 16-4" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                <circle cx="47" cy="49" r="6" stroke="currentColor" strokeWidth="2" />
+                <path d="m31 80 23-22 16 14 12-11 18 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <svg viewBox="0 0 180 140" className="pointer-events-none absolute -right-5 top-1/2 h-40 w-52 -translate-y-1/2 text-fuchsia-300/15" fill="none" aria-hidden="true">
                 <circle cx="129" cy="37" r="20" stroke="currentColor" strokeWidth="2" />
@@ -305,23 +307,23 @@ export default function VideoUploader() {
                     <path d="M12 15V5m0 0L8.5 8.5M12 5l3.5 3.5M5 14.5v2A2.5 2.5 0 0 0 7.5 19h9a2.5 2.5 0 0 0 2.5-2.5v-2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
-                <p className="mt-4 text-base font-semibold tracking-tight text-slate-100 sm:text-lg">Drop your source video here</p>
-                <p className="mt-2 max-w-sm text-xs leading-5 text-slate-400 sm:text-sm">Drag an MP4 or MOV into this space, or click anywhere to choose a file.</p>
+                <p className="mt-4 text-base font-semibold tracking-tight text-slate-100 sm:text-lg">Drop your source image here</p>
+                <p className="mt-2 max-w-sm text-xs leading-5 text-slate-400 sm:text-sm">Drag a JPEG, PNG or WebP image here, or click anywhere to choose a file.</p>
               </div>
               <FileUploaderMinimal
                 apiRef={uploaderRef}
                 pubkey={publicKey}
                 multiple={false}
                 multipleMax={1}
-                accept={videoAcceptTypes}
-                maxLocalFileSizeBytes={maximumVideoSizeBytes}
+                accept={imageAcceptTypes}
+                maxLocalFileSizeBytes={maximumImageSizeBytes}
                 sourceList="local"
                 className="uploadcare-dropzone uc-dark uc-radius-medium"
                 localeDefinitionOverride={{
                   en: {
-                    "choose-file": "Choose video",
-                    "drop-file-here": "Drop your video here",
-                    "drop-files-here": "Drop your videos here",
+                    "choose-file": "Choose image",
+                    "drop-file-here": "Drop your image here",
+                    "drop-files-here": "Drop your images here",
                   },
                 }}
                 onFileAdded={handleFileAdded}
@@ -376,7 +378,7 @@ export default function VideoUploader() {
               <div className="flex items-start gap-3">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700">!</span>
                 <div>
-                  <p className="text-sm font-semibold text-rose-950">We couldn’t prepare this video</p>
+                  <p className="text-sm font-semibold text-rose-950">We couldn’t prepare this image</p>
                   <p className="mt-1 text-sm leading-6 text-rose-800">{error}</p>
                   {uploadedEntry && (
                     <button
@@ -394,31 +396,23 @@ export default function VideoUploader() {
 
           {isReady && (
             <div className="grid grid-cols-[minmax(0,8rem)_1fr] gap-4 sm:grid-cols-[minmax(0,15rem)_1fr] sm:gap-5" aria-live="polite">
-              <video
-                className="aspect-video w-full rounded-xl bg-slate-950 object-contain shadow-sm"
-                controls
-                preload="metadata"
-                src={sourceVideo.url}
-                aria-label={`Source video: ${sourceVideo.originalName}`}
-              >
-                Your browser does not support video preview.
-              </video>
+              <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-950 shadow-sm"><Image fill sizes="(max-width: 640px) 50vw, 30vw" src={sourceImage.url} alt={`Source image: ${sourceImage.originalName}`} className="object-contain" /></div>
               <div className="flex min-w-0 flex-col justify-center">
-                <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-300/50 bg-emerald-500/12 px-2.5 py-1 text-xs font-semibold text-emerald-200">
                   <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
                   Ready to configure
                 </span>
-                <p className="mt-3 truncate text-base font-semibold text-slate-950" title={sourceVideo.originalName}>
-                  {sourceVideo.originalName}
+                <p className="mt-3 truncate text-base font-semibold text-slate-950" title={sourceImage.originalName}>
+                  {sourceImage.originalName}
                 </p>
                 <dl className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
                   <div className="rounded-lg bg-slate-100 px-2.5 py-1.5">
                     <dt className="sr-only">Format</dt>
-                    <dd>{sourceVideo.mimeType === "video/quicktime" ? "MOV" : "MP4"}</dd>
+                    <dd>{sourceImage.mimeType.split("/")[1]?.toUpperCase() ?? "Image"}</dd>
                   </div>
                   <div className="rounded-lg bg-slate-100 px-2.5 py-1.5">
                     <dt className="sr-only">File size</dt>
-                    <dd>{formatFileSize(sourceVideo.bytes)}</dd>
+                    <dd>{formatFileSize(sourceImage.bytes)}</dd>
                   </div>
                 </dl>
                 <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-500">
@@ -429,10 +423,10 @@ export default function VideoUploader() {
                 </p>
                 <button
                   type="button"
-                  onClick={replaceSourceVideo}
+                  onClick={replaceSourceImage}
                   className="mt-4 w-fit rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
                 >
-                  Replace video
+                  Replace image
                 </button>
               </div>
             </div>
@@ -441,7 +435,7 @@ export default function VideoUploader() {
       </section>
 
       {isReady && transformationId && (
-        <TransformationForm transformationId={transformationId} />
+        <TransformationForm transformationId={transformationId} onQueued={onTransformationQueued} />
       )}
     </>
   );

@@ -1,5 +1,7 @@
-import type { TransformationHistoryItem } from "@/components/TransformationHistory/TransformationHistory.types";
-import type { TransformationHistoryStatus } from "@/components/TransformationHistory/TransformationHistory.types";
+import type {
+  TransformationHistoryItem,
+  TransformationHistoryStatus,
+} from "@/components/TransformationHistory/TransformationHistory.types";
 
 export interface TransformationDetailsProps {
   transformation: TransformationHistoryItem;

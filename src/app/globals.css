@@ -538,3 +538,25 @@ button:disabled {
 .dark-app .ai-upload-scene .uploadcare-dropzone uc-copyright {
   display: none !important;
 }
+
+@keyframes transformation-progress-flow {
+  from {
+    transform: translateX(-180%);
+  }
+
+  to {
+    transform: translateX(380%);
+  }
+}
+
+.transformation-progress-flow {
+  animation: transformation-progress-flow 1.8s ease-in-out infinite;
+  box-shadow: 0 0 10px currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transformation-progress-flow {
+    animation: none;
+    opacity: 0;
+  }
+}

@@ -12,7 +12,8 @@ A full-stack case study that transforms one source image with Magic Hour AI. Use
 - Validates image type and a 20 MB size limit
 - Stores source and generated images in Cloudinary
 - Sends the selected prompt and image settings to Magic Hour's image editor
-- Receives asynchronous Magic Hour updates through a signed webhook
+- Receives asynchronous Magic Hour image updates through a signed webhook
+- Reconciles active image jobs with Magic Hour when history refreshes, so a missed webhook can recover safely
 - Saves each transformation and its status in MongoDB
 - Shows project history, processing states, errors, source images, and generated images
 - Works on desktop and mobile layouts
@@ -35,7 +36,8 @@ A full-stack case study that transforms one source image with Magic Hour AI. Use
 5. `POST /api/transform` creates a Magic Hour job and changes the record to `queued`.
 6. Magic Hour calls `POST /api/webhook` as the job progresses.
 7. When processing is complete, the generated image or images are copied to Cloudinary and MongoDB is updated.
-8. The history view refreshes automatically while the page is open.
+8. `GET /api/history` reconciles active jobs with Magic Hour before returning history. This recovers completed results if a webhook delivery was missed.
+9. The history view refreshes automatically while the page is open.
 
 ## API endpoints
 
@@ -44,7 +46,7 @@ A full-stack case study that transforms one source image with Magic Hour AI. Use
 | `POST` | `/api/upload` | Validates an Uploadcare image and stores the source in Cloudinary. |
 | `POST` | `/api/transform` | Sends the selected settings to Magic Hour. |
 | `POST` | `/api/webhook` | Receives Magic Hour image events and saves generated images. |
-| `GET` | `/api/history` | Returns the current browser's transformation history. |
+| `GET` | `/api/history` | Reconciles active Magic Hour jobs, then returns the current browser's transformation history. |
 
 ## Run locally
 
@@ -98,6 +100,14 @@ https://ai-video-to-video-tool.vercel.app/api/webhook
 
 Copy the webhook signing secret from Magic Hour into `MAGIC_HOUR_WEBHOOK_SECRET` in Vercel. The endpoint verifies the signature before accepting an event.
 
+The webhook endpoint must include the API route. Do not use only the deployment root URL:
+
+```text
+https://ai-video-to-video-tool.vercel.app/api/webhook
+```
+
+The signed webhook is the low-latency update path. The history endpoint also checks active image projects directly with Magic Hour, so a refresh can recover a completed result when a delivery is delayed or missed.
+
 ## Deploy to Vercel
 
 1. Push the repository to GitHub and import it in Vercel.
@@ -112,6 +122,7 @@ Copy the webhook signing secret from Magic Hour into `MAGIC_HOUR_WEBHOOK_SECRET`
 - The server checks Uploadcare file details again before storage.
 - API keys and database credentials stay on the server.
 - Webhook signatures are checked before processing provider events.
+- Webhook and history reconciliation share an atomic output-save claim, so the same image result cannot be stored twice.
 - Invalid API input and provider failures show safe user-facing error messages.
 - Duplicate webhook events do not create duplicate generated images.
 

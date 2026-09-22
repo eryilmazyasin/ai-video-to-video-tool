@@ -205,10 +205,22 @@ function TransformationProgress({
           const isCurrentStep = index === currentStepIndex && !isCompleted && !isFailed;
           const isCompletedStep = index < currentStepIndex || isCompleted;
           const isFailedStep = isFailed && index === currentStepIndex;
+          const isCurrentConnector = index === currentStepIndex && !isCompleted && !isFailed;
+          const isCompletedConnector = index < currentStepIndex || isCompleted;
+          const shouldAnimateConnector = isCurrentConnector || isCompletedConnector;
 
           return (
             <li key={step.label} className="relative min-w-0 sm:pr-2">
-              {index < progressSteps.length - 1 && <span className={`absolute left-5 top-4 hidden h-px w-[calc(100%-1rem)] sm:block ${isCompletedStep ? "bg-emerald-400" : "bg-slate-200"}`} aria-hidden="true" />}
+              {index < progressSteps.length - 1 && (
+                <span
+                  className={`absolute left-5 top-4 hidden h-px w-[calc(100%-1rem)] overflow-hidden sm:block ${isCompletedConnector ? "bg-emerald-400/70" : isCurrentConnector ? "bg-violet-400/60" : "bg-slate-200"}`}
+                  aria-hidden="true"
+                >
+                  {shouldAnimateConnector && (
+                    <span className={`transformation-progress-flow absolute inset-y-0 left-0 w-2/5 ${isCompletedConnector ? "bg-emerald-100" : "bg-violet-100"}`} />
+                  )}
+                </span>
+              )}
               <div className="relative flex items-start gap-3 sm:flex-col sm:gap-2">
                 <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-4 ring-[#2b2142] ${isFailedStep ? "bg-rose-500 text-white" : isCompletedStep ? "bg-emerald-500 text-white" : isCurrentStep ? "bg-violet-600 text-white shadow-[0_0_0_5px_rgb(139_92_246_/_16%)]" : "bg-slate-200 text-slate-500"}`}>
                   {isCompletedStep ? "✓" : index + 1}

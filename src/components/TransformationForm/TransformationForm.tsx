@@ -235,7 +235,7 @@ export default function TransformationForm({ transformationId }: TransformationF
           type="submit"
           form="transformation-settings-form"
           disabled={isFormDisabled}
-          className="ai-cta flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-300/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:opacity-60 sm:w-auto"
+          className="ai-cta flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 px-5 text-sm font-semibold text-white shadow-[0_10px_28px_rgb(109_40_217_/_25%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:opacity-60 sm:w-auto"
         >
           <span className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.35),transparent_45%)]" aria-hidden="true" />
           {isSubmitting ? (
@@ -429,9 +429,9 @@ export default function TransformationForm({ transformationId }: TransformationF
           </div>
         </div>
 
-        <div className="relative isolate overflow-hidden rounded-b-2xl border-t border-violet-200/70 bg-gradient-to-br from-violet-100 via-fuchsia-50 to-indigo-100 px-5 py-6 sm:px-6">
-          <span className="pointer-events-none absolute -top-24 right-6 -z-10 size-56 rounded-full bg-fuchsia-200/40 blur-3xl" aria-hidden="true" />
-          <span className="pointer-events-none absolute -bottom-28 left-1/3 -z-10 size-56 rounded-full bg-indigo-200/45 blur-3xl" aria-hidden="true" />
+        <div className="relative isolate overflow-hidden rounded-b-2xl border-t border-violet-400/25 bg-gradient-to-br from-[#1c1234] via-[#151426] to-[#101a38] px-5 py-6 sm:px-6">
+          <span className="pointer-events-none absolute -top-24 right-6 -z-10 size-56 rounded-full bg-fuchsia-500/10 blur-3xl" aria-hidden="true" />
+          <span className="pointer-events-none absolute -bottom-28 left-1/3 -z-10 size-56 rounded-full bg-indigo-500/10 blur-3xl" aria-hidden="true" />
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -443,10 +443,10 @@ export default function TransformationForm({ transformationId }: TransformationF
                   <p className="mt-1 text-xs leading-5 text-slate-500">{isQueued ? "You can safely leave this page while processing continues." : "Generation continues safely in the background after submission."}</p>
                 </div>
               </div>
-              <dl className="mt-4 flex flex-wrap gap-2 text-xs">
-                <div className="rounded-lg border border-white/80 bg-white/65 px-3 py-2 text-slate-700 shadow-sm backdrop-blur-sm"><dt className="inline text-slate-400">Clip </dt><dd className="inline font-medium">{Number.isFinite(clipDuration) ? clipDuration.toFixed(1) : "0.0"} sec</dd></div>
-                <div className="max-w-56 truncate rounded-lg border border-white/80 bg-white/65 px-3 py-2 text-slate-700 shadow-sm backdrop-blur-sm" title={values.artStyle}><dt className="inline text-slate-400">Style </dt><dd className="inline font-medium">{values.artStyle}</dd></div>
-                <div className="rounded-lg border border-white/80 bg-white/65 px-3 py-2 text-slate-700 shadow-sm backdrop-blur-sm"><dt className="inline text-slate-400">Frame rate </dt><dd className="inline font-medium">{values.fpsResolution === "HALF" ? "Half" : "Full"}</dd></div>
+              <dl className="mt-4 grid grid-cols-3 gap-1.5 text-[11px] sm:flex sm:flex-wrap sm:gap-2 sm:text-xs">
+                <div className="min-w-0 whitespace-nowrap rounded-lg border border-white/80 bg-white/65 px-2 py-2 text-slate-700 shadow-sm backdrop-blur-sm sm:px-3"><dt className="inline text-slate-400">Clip </dt><dd className="inline font-medium">{Number.isFinite(clipDuration) ? clipDuration.toFixed(1) : "0.0"} sec</dd></div>
+                <div className="min-w-0 truncate whitespace-nowrap rounded-lg border border-white/80 bg-white/65 px-2 py-2 text-slate-700 shadow-sm backdrop-blur-sm sm:max-w-56 sm:px-3" title={values.artStyle}><dt className="inline text-slate-400">Style </dt><dd className="inline font-medium">{values.artStyle}</dd></div>
+                <div className="min-w-0 whitespace-nowrap rounded-lg border border-white/80 bg-white/65 px-2 py-2 text-slate-700 shadow-sm backdrop-blur-sm sm:px-3"><dt className="inline text-slate-400">Frame rate </dt><dd className="inline font-medium">{values.fpsResolution === "HALF" ? "Half" : "Full"}</dd></div>
               </dl>
               {submissionError && (
                 <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-medium leading-5 text-rose-900" role="alert">{submissionError}</p>
@@ -455,7 +455,7 @@ export default function TransformationForm({ transformationId }: TransformationF
             <button
               type="submit"
               disabled={isFormDisabled}
-              className="ai-cta flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 px-6 text-sm font-semibold text-white shadow-xl shadow-violet-300/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:opacity-60 lg:w-auto"
+              className="ai-cta flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 px-6 text-sm font-semibold text-white shadow-[0_12px_32px_rgb(109_40_217_/_30%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 disabled:opacity-60 lg:w-auto"
             >
               {isSubmitting ? (
                 <><span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" aria-hidden="true" />Submitting…</>

@@ -9,7 +9,6 @@ import VideoUploader from "@/components/VideoUploader/VideoUploader";
 
 export default function Home() {
   const [selectedTransformation, setSelectedTransformation] = useState<TransformationHistoryItem | null>(null);
-  const [lastSelectedTransformation, setLastSelectedTransformation] = useState<TransformationHistoryItem | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
@@ -69,19 +68,11 @@ export default function Home() {
 
   const handleSelectTransformation = useCallback((transformation: TransformationHistoryItem) => {
     setSelectedTransformation(transformation);
-    setLastSelectedTransformation(transformation);
     setIsCreatingNew(false);
     setIsHistoryDrawerOpen(false);
   }, []);
   const handleTransformationsChange = useCallback((transformations: TransformationHistoryItem[]) => {
     setSelectedTransformation((currentSelection) => {
-      if (!currentSelection) {
-        return currentSelection;
-      }
-
-      return transformations.find((transformation) => transformation.id === currentSelection.id) ?? null;
-    });
-    setLastSelectedTransformation((currentSelection) => {
       if (!currentSelection) {
         return currentSelection;
       }
@@ -96,8 +87,8 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950 lg:flex">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur lg:hidden">
+    <main className="dark-app min-h-screen bg-[#09090f] text-slate-100 lg:flex">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-[#0c0c14]/95 px-4 backdrop-blur lg:hidden">
         <button
           ref={historyButtonRef}
           type="button"
@@ -136,14 +127,14 @@ export default function Home() {
       <aside
         ref={historyDrawerRef}
         id="history-sidebar"
-        className={`fixed inset-y-0 left-0 z-50 min-h-0 w-[min(22rem,calc(100vw-2rem))] flex-col border-r border-slate-200 bg-white shadow-2xl shadow-slate-900/10 transition-transform duration-200 lg:sticky lg:top-0 lg:z-0 lg:flex lg:h-screen lg:w-[280px] lg:shrink-0 lg:translate-x-0 lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 min-h-0 w-[min(22rem,calc(100vw-2rem))] flex-col border-r border-white/10 bg-[#10101a] shadow-2xl shadow-black/40 transition-transform duration-200 lg:sticky lg:top-0 lg:z-0 lg:flex lg:h-screen lg:w-[280px] lg:shrink-0 lg:translate-x-0 lg:shadow-none ${
           isHistoryDrawerOpen ? "flex translate-x-0" : "hidden -translate-x-full"
         }`}
         role={isHistoryDrawerOpen ? "dialog" : undefined}
         aria-modal={isHistoryDrawerOpen || undefined}
         aria-labelledby="history-sidebar-brand"
       >
-        <div className="flex h-20 shrink-0 items-center justify-between border-b border-slate-200 px-5">
+        <div className="flex h-20 shrink-0 items-center justify-between border-b border-white/10 px-5">
           <div className="flex items-center gap-3">
             <span className="flex size-9 items-center justify-center rounded-xl bg-violet-600 text-sm font-bold text-white shadow-sm shadow-violet-200">F</span>
             <div>
@@ -179,27 +170,13 @@ export default function Home() {
           ) : (
             <>
               <section className="mb-9 max-w-2xl">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold tracking-[0.16em] text-violet-700 uppercase">
-                      New transformation
-                    </p>
-                    <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                      Start with your source video
-                    </h1>
-                  </div>
-                  {lastSelectedTransformation && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedTransformation(lastSelectedTransformation);
-                        setIsCreatingNew(false);
-                      }}
-                      className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
-                    >
-                      Back to project
-                    </button>
-                  )}
+                <div>
+                  <p className="text-xs font-semibold tracking-[0.16em] text-violet-700 uppercase">
+                    New transformation
+                  </p>
+                  <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+                    Start with your source video
+                  </h1>
                 </div>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">
                   Upload a source video to create a new visual direction with AI.

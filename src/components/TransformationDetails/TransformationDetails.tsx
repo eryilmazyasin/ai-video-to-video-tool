@@ -23,11 +23,11 @@ const statusLabels = {
 
 const statusClasses = {
   staging: "bg-slate-100 text-slate-600 ring-slate-200",
-  ready: "bg-violet-50 text-violet-700 ring-violet-200",
-  submitting: "bg-violet-50 text-violet-700 ring-violet-200",
-  queued: "bg-violet-50 text-violet-700 ring-violet-200",
-  processing: "bg-violet-50 text-violet-700 ring-violet-200",
-  saving_output: "bg-violet-50 text-violet-700 ring-violet-200",
+  ready: "bg-sky-50 text-sky-700 ring-sky-200",
+  submitting: "bg-sky-50 text-sky-700 ring-sky-200",
+  queued: "bg-amber-50 text-amber-700 ring-amber-200",
+  processing: "bg-sky-50 text-sky-700 ring-sky-200",
+  saving_output: "bg-sky-50 text-sky-700 ring-sky-200",
   completed: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   failed: "bg-rose-50 text-rose-700 ring-rose-200",
 } as const;

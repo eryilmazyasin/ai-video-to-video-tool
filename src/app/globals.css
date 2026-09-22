@@ -23,6 +23,252 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+/* Shared dark surfaces keep every workflow state in the same visual system. */
+.dark-app {
+  --background: #09090f;
+  --foreground: #f8fafc;
+  background:
+    radial-gradient(circle at 85% -10%, rgb(109 40 217 / 14%), transparent 32rem),
+    #09090f;
+}
+
+.dark-app .bg-white,
+.dark-app .bg-white\/95 {
+  background-color: #12121e;
+}
+
+.dark-app .bg-white\/65,
+.dark-app .bg-white\/80,
+.dark-app .bg-white\/90 {
+  background-color: rgb(34 34 52 / 88%);
+}
+
+.dark-app .bg-slate-50,
+.dark-app .bg-slate-50\/50,
+.dark-app .bg-slate-50\/60,
+.dark-app .bg-slate-50\/70,
+.dark-app .bg-slate-50\/80 {
+  background-color: #171724;
+}
+
+.dark-app .bg-slate-100,
+.dark-app .bg-slate-100\/80,
+.dark-app .bg-slate-200 {
+  background-color: #222234;
+}
+
+.dark-app .bg-violet-100 {
+  background-color: rgb(139 92 246 / 18%);
+}
+
+.dark-app .bg-indigo-100 {
+  background-color: rgb(99 102 241 / 18%);
+}
+
+.dark-app .bg-violet-50,
+.dark-app .bg-violet-50\/30,
+.dark-app .bg-violet-50\/60,
+.dark-app .bg-violet-50\/70,
+.dark-app .bg-violet-50\/80 {
+  background-color: rgb(109 40 217 / 14%);
+}
+
+.dark-app .hover\:bg-slate-50:hover,
+.dark-app .hover\:bg-slate-100:hover,
+.dark-app .hover\:bg-slate-200:hover {
+  background-color: #1c1c2b;
+}
+
+.dark-app .hover\:border-slate-200:hover,
+.dark-app .hover\:border-slate-300:hover {
+  border-color: rgb(148 163 184 / 28%);
+}
+
+.dark-app .bg-emerald-50 {
+  background-color: rgb(16 185 129 / 12%);
+}
+
+.dark-app .bg-sky-50 {
+  background-color: rgb(14 165 233 / 12%);
+}
+
+.dark-app .bg-amber-50 {
+  background-color: rgb(245 158 11 / 12%);
+}
+
+.dark-app .bg-rose-50,
+.dark-app .bg-rose-50\/70,
+.dark-app .bg-rose-50\/80 {
+  background-color: rgb(244 63 94 / 12%);
+}
+
+.dark-app .text-slate-950,
+.dark-app .text-slate-900,
+.dark-app .text-slate-800 {
+  color: #f1f5f9;
+}
+
+.dark-app .text-slate-700,
+.dark-app .text-slate-600 {
+  color: #cbd5e1;
+}
+
+.dark-app .text-slate-500 {
+  color: #94a3b8;
+}
+
+.dark-app .text-slate-400 {
+  color: #71809a;
+}
+
+.dark-app .text-violet-950,
+.dark-app .text-violet-900,
+.dark-app .text-violet-800 {
+  color: #ede9fe;
+}
+
+.dark-app .text-violet-700,
+.dark-app .text-violet-600 {
+  color: #c4b5fd;
+}
+
+.dark-app .text-sky-700 {
+  color: #7dd3fc;
+}
+
+.dark-app .text-amber-700 {
+  color: #fcd34d;
+}
+
+.dark-app .text-rose-950,
+.dark-app .text-rose-900,
+.dark-app .text-rose-800 {
+  color: #fecdd3;
+}
+
+.dark-app .border-slate-100,
+.dark-app .border-slate-200,
+.dark-app .border-slate-200\/80,
+.dark-app .border-slate-300 {
+  border-color: rgb(148 163 184 / 16%);
+}
+
+.dark-app .border-violet-100,
+.dark-app .border-violet-200,
+.dark-app .border-violet-200\/70,
+.dark-app .border-violet-200\/80 {
+  border-color: rgb(167 139 250 / 25%);
+}
+
+.dark-app .ring-slate-200,
+.dark-app .ring-violet-100,
+.dark-app .ring-violet-200 {
+  --tw-ring-color: rgb(167 139 250 / 22%);
+}
+
+.dark-app .ring-emerald-100 {
+  --tw-ring-color: rgb(52 211 153 / 20%);
+}
+
+.dark-app .ring-sky-100,
+.dark-app .ring-sky-200 {
+  --tw-ring-color: rgb(56 189 248 / 22%);
+}
+
+.dark-app .ring-amber-100,
+.dark-app .ring-amber-200 {
+  --tw-ring-color: rgb(251 191 36 / 22%);
+}
+
+.dark-app .ring-rose-100 {
+  --tw-ring-color: rgb(251 113 133 / 20%);
+}
+
+.dark-app .focus\:ring-violet-100:focus {
+  --tw-ring-color: rgb(139 92 246 / 28%);
+}
+
+.dark-app .focus\:border-violet-500:focus {
+  border-color: #8b5cf6;
+}
+
+.dark-app .focus\:border-violet-400:focus {
+  border-color: #8b5cf6;
+}
+
+.dark-app .shadow-slate-200\/60,
+.dark-app .shadow-slate-900\/10 {
+  --tw-shadow-color: rgb(0 0 0 / 35%);
+}
+
+.dark-app .shadow-violet-100,
+.dark-app .shadow-violet-100\/70,
+.dark-app .shadow-violet-200,
+.dark-app .shadow-violet-300\/50 {
+  --tw-shadow-color: rgb(109 40 217 / 24%);
+}
+
+.dark-app .ai-cta:not(:disabled):hover {
+  box-shadow:
+    0 14px 32px rgb(91 33 182 / 42%),
+    0 0 30px rgb(192 38 211 / 18%);
+}
+
+.dark-app .ai-cta:not(:disabled) {
+  border: 1px solid rgb(196 181 253 / 42%);
+  box-shadow:
+    0 10px 26px rgb(91 33 182 / 32%),
+    0 0 20px rgb(168 85 247 / 14%);
+}
+
+.dark-app .ai-cta:not(:disabled)::before {
+  display: none;
+}
+
+.dark-app [role="listbox"] {
+  scrollbar-color: #4c3b6e #12121e;
+}
+
+.dark-app [role="listbox"]::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dark-app [role="listbox"]::-webkit-scrollbar-track {
+  background: #12121e;
+}
+
+.dark-app [role="listbox"]::-webkit-scrollbar-thumb {
+  border: 2px solid #12121e;
+  border-radius: 999px;
+  background: #4c3b6e;
+}
+
+.dark-app .from-violet-50 {
+  --tw-gradient-from: #1d1538 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(29 21 56 / 0) var(--tw-gradient-to-position);
+}
+
+.dark-app .via-white {
+  --tw-gradient-stops: var(--tw-gradient-from), #151522 var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+.dark-app .to-indigo-50\/70 {
+  --tw-gradient-to: rgb(30 27 75 / 65%) var(--tw-gradient-to-position);
+}
+
+.dark-app .from-violet-100 {
+  --tw-gradient-from: #211442 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(33 20 66 / 0) var(--tw-gradient-to-position);
+}
+
+.dark-app .via-fuchsia-50 {
+  --tw-gradient-stops: var(--tw-gradient-from), #1c1331 var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+.dark-app .to-indigo-100 {
+  --tw-gradient-to: #151b3d var(--tw-gradient-to-position);
+}
+
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]) {
   cursor: pointer;
@@ -105,4 +351,158 @@ button:disabled {
   --uc-secondary-foreground: #374151;
   --uc-border: #e5e7eb;
   --uc-radius: 10px;
+}
+
+.uploadcare-dropzone uc-drop-area {
+  min-height: 62px;
+  border: 1px solid rgb(221 214 254 / 90%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 72%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 90%),
+    0 4px 12px rgb(124 58 237 / 6%);
+}
+
+.uploadcare-dropzone uc-drop-area:hover {
+  border-color: rgb(167 139 250 / 90%);
+  background: rgb(255 255 255 / 95%);
+}
+
+.uploadcare-dropzone uc-drop-area span {
+  color: #5b21b6;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.uploadcare-dropzone uc-copyright .uc-credits {
+  position: static;
+  display: inline-block;
+  margin-top: 6px;
+  padding: 0;
+  color: #94a3b8;
+  background: transparent;
+  font-size: 10px;
+  line-height: 1.25;
+  opacity: 0.65;
+}
+
+.uploadcare-dropzone uc-copyright .uc-credits:hover {
+  color: #64748b;
+  background: transparent;
+}
+
+.dark-app .uploadcare-dropzone {
+  --uc-primary-oklch-dark: 72% 0.16 295;
+  --uc-primary: #a78bfa;
+  --uc-primary-hover: #c4b5fd;
+  --uc-primary-foreground: #11111c;
+  --uc-simple-btn: #211b38;
+  --uc-simple-btn-hover: #2b234b;
+  --uc-simple-btn-foreground: #ddd6fe;
+  --uc-secondary: #1b1b2b;
+  --uc-secondary-hover: #242438;
+  --uc-secondary-foreground: #e2e8f0;
+  --uc-background: #151522;
+  --uc-foreground: #e2e8f0;
+  --uc-muted: #202034;
+  --uc-muted-foreground: #94a3b8;
+  --uc-border: rgb(167 139 250 / 30%);
+}
+
+.dark-app .uploadcare-dropzone uc-drop-area {
+  border-color: rgb(196 181 253 / 38%);
+  background:
+    radial-gradient(circle at 82% 12%, rgb(217 70 239 / 22%), transparent 48%),
+    linear-gradient(120deg, rgb(139 92 246 / 34%), rgb(30 41 59 / 58%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 10%),
+    0 8px 24px rgb(0 0 0 / 14%);
+  backdrop-filter: blur(12px);
+}
+
+.dark-app .uploadcare-dropzone uc-drop-area:hover {
+  border-color: rgb(221 214 254 / 72%);
+  background:
+    radial-gradient(circle at 76% 10%, rgb(217 70 239 / 28%), transparent 50%),
+    linear-gradient(120deg, rgb(139 92 246 / 44%), rgb(49 46 129 / 58%));
+}
+
+.dark-app .uploadcare-dropzone uc-drop-area span {
+  color: #ddd6fe;
+}
+
+.dark-app .uploadcare-dropzone uc-copyright .uc-credits {
+  color: #64748b;
+}
+
+.dark-app .uploadcare-dropzone uc-copyright .uc-credits:hover {
+  color: #94a3b8;
+}
+
+/* The provider stays mounted for validation while the custom scene owns the upload interaction. */
+.dark-app .ai-upload-scene {
+  background:
+    radial-gradient(circle at 50% 46%, rgb(124 58 237 / 28%), transparent 29%),
+    radial-gradient(circle at 82% 22%, rgb(217 70 239 / 12%), transparent 32%),
+    linear-gradient(135deg, rgb(22 22 38 / 96%), rgb(12 12 22 / 98%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 7%),
+    0 18px 36px rgb(0 0 0 / 22%);
+}
+
+.dark-app .ai-upload-scene::before {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(167 139 250 / 6%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(167 139 250 / 6%) 1px, transparent 1px);
+  background-size: 28px 28px;
+  content: "";
+  mask-image: radial-gradient(circle at center, black, transparent 75%);
+}
+
+.dark-app .ai-upload-scene:hover {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 10%),
+    0 18px 42px rgb(76 29 149 / 22%);
+}
+
+.dark-app .ai-upload-scene:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+
+.dark-app .ai-upload-icon {
+  background: linear-gradient(145deg, rgb(167 139 250 / 27%), rgb(76 29 149 / 42%));
+  box-shadow:
+    0 0 0 8px rgb(139 92 246 / 6%),
+    0 0 0 16px rgb(139 92 246 / 4%),
+    0 0 30px rgb(168 85 247 / 45%),
+    inset 0 1px 0 rgb(255 255 255 / 20%);
+}
+
+.dark-app .ai-upload-scene .uploadcare-dropzone {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  height: 28px;
+  pointer-events: none;
+}
+
+.dark-app .ai-upload-scene .uploadcare-dropzone uc-drop-area {
+  display: none !important;
+}
+
+.dark-app .ai-upload-scene .uploadcare-dropzone uc-copyright {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.35rem;
+  justify-content: flex-end;
+}
+
+.dark-app .ai-upload-scene .uploadcare-dropzone uc-copyright .uc-credits {
+  margin: 0;
+  pointer-events: auto;
 }

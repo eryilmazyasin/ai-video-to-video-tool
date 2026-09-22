@@ -104,7 +104,7 @@ export default function CustomSelect<Value extends string>({
           id={listboxId}
           role="listbox"
           aria-labelledby={id}
-          className="absolute z-30 mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-200/70"
+          className="absolute z-30 mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_18px_36px_rgb(0_0_0_/_42%)]"
         >
           {options.map((option, optionIndex) => {
             const isSelected = option.value === value;

@@ -61,3 +61,10 @@ export interface TransformationHistoryProps {
   onStartNewTransformation: () => void;
   onTransformationsChange: (transformations: TransformationHistoryItem[]) => void;
 }
+
+export interface StatusTooltip {
+  label: string;
+  left: number;
+  status: TransformationHistoryStatus;
+  top: number;
+}

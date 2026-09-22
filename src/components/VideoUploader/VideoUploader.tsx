@@ -3,7 +3,7 @@
 import { FileUploaderMinimal } from "@uploadcare/react-uploader/next";
 import type { UploadCtxProvider } from "@uploadcare/file-uploader";
 import "@uploadcare/react-uploader/core.css";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 
 import TransformationForm from "@/components/TransformationForm/TransformationForm";
 import type {
@@ -72,6 +72,7 @@ export default function VideoUploader() {
   );
   const [sourceVideo, setSourceVideo] = useState<PreparedSourceVideo | null>(null);
   const [transformationId, setTransformationId] = useState<string | null>(null);
+  const [isDropSurfaceActive, setIsDropSurfaceActive] = useState(false);
 
   const prepareSourceVideo = useCallback(async (entry: UploadcareSuccessEntry) => {
     const { uuid } = entry;
@@ -185,6 +186,34 @@ export default function VideoUploader() {
     window.setTimeout(() => uploaderApi?.openSystemDialog(), 0);
   }, []);
 
+  const openFileDialog = useCallback(() => {
+    uploaderRef.current?.getAPI().openSystemDialog();
+  }, []);
+
+  const handleUploadSurfaceKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openFileDialog();
+    }
+  }, [openFileDialog]);
+
+  const handleUploadSurfaceDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDropSurfaceActive(false);
+
+    const file = event.dataTransfer.files.item(0);
+
+    if (!file) {
+      return;
+    }
+
+    const uploaderApi = uploaderRef.current?.getAPI();
+
+    // Send dropped files through the same Uploadcare validation and upload flow.
+    uploaderApi?.removeAllFiles();
+    uploaderApi?.addFileFromObject(file);
+  }, []);
+
   if (!publicKey) {
     return (
       <section
@@ -230,21 +259,55 @@ export default function VideoUploader() {
               </p>
             </div>
           </div>
-          <span className="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+          <span className="ml-12 w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 sm:ml-0">
             MP4 or MOV · Max 50 MB
           </span>
         </div>
 
         <div className="min-h-52 p-5 sm:p-6">
           <div className={showUploader ? "block" : "hidden"}>
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-3 text-center transition hover:border-violet-300 hover:bg-violet-50/30 sm:p-5">
-              <span className="mx-auto flex size-11 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm ring-1 ring-slate-200">
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" className="size-5" aria-hidden="true">
-                  <path d="M10 13V4m0 0L6.75 7.25M10 4l3.25 3.25M4 12.5v2A1.5 1.5 0 0 0 5.5 16h9a1.5 1.5 0 0 0 1.5-1.5v-2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <p className="mt-3 text-sm font-semibold text-slate-900">Drop a video here or choose from your device</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Short clips process faster and use fewer generation credits.</p>
+            <div
+              className={`ai-upload-scene relative isolate min-h-60 cursor-pointer overflow-hidden rounded-2xl border border-dashed p-5 text-center transition sm:min-h-64 sm:p-7 ${isDropSurfaceActive ? "border-violet-300" : "border-violet-400/45 hover:border-violet-300/80"}`}
+              role="button"
+              tabIndex={0}
+              aria-label="Choose a source video"
+              onClick={openFileDialog}
+              onKeyDown={handleUploadSurfaceKeyDown}
+              onDragEnter={(event) => {
+                event.preventDefault();
+                setIsDropSurfaceActive(true);
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "copy";
+              }}
+              onDragLeave={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                  setIsDropSurfaceActive(false);
+                }
+              }}
+              onDrop={handleUploadSurfaceDrop}
+            >
+              <svg viewBox="0 0 180 140" className="pointer-events-none absolute -left-5 top-1/2 h-40 w-52 -translate-y-1/2 text-violet-300/15" fill="none" aria-hidden="true">
+                <rect x="18" y="31" width="90" height="63" rx="8" stroke="currentColor" strokeWidth="2" transform="rotate(-14 18 31)" />
+                <path d="m55 49 23 13-23 13V49Z" fill="currentColor" />
+                <path d="M24 44 40 40m-21 16 16-4m55 23 16-4m-21 16 16-4" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              <svg viewBox="0 0 180 140" className="pointer-events-none absolute -right-5 top-1/2 h-40 w-52 -translate-y-1/2 text-fuchsia-300/15" fill="none" aria-hidden="true">
+                <circle cx="129" cy="37" r="20" stroke="currentColor" strokeWidth="2" />
+                <circle cx="71" cy="70" r="11" stroke="currentColor" strokeWidth="2" />
+                <circle cx="137" cy="106" r="9" stroke="currentColor" strokeWidth="2" />
+                <path d="m83 65 27-19m-26 32 42 22m13-44 0 39" stroke="currentColor" strokeWidth="2" />
+              </svg>
+              <div className="relative z-10 flex min-h-48 flex-col items-center justify-center">
+                <span className="ai-upload-icon flex size-16 items-center justify-center rounded-full text-violet-200 sm:size-18">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="size-8" aria-hidden="true">
+                    <path d="M12 15V5m0 0L8.5 8.5M12 5l3.5 3.5M5 14.5v2A2.5 2.5 0 0 0 7.5 19h9a2.5 2.5 0 0 0 2.5-2.5v-2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <p className="mt-4 text-base font-semibold tracking-tight text-slate-100 sm:text-lg">Drop your source video here</p>
+                <p className="mt-2 max-w-sm text-xs leading-5 text-slate-400 sm:text-sm">Drag an MP4 or MOV into this space, or click anywhere to choose a file.</p>
+              </div>
               <FileUploaderMinimal
                 apiRef={uploaderRef}
                 pubkey={publicKey}
@@ -253,7 +316,7 @@ export default function VideoUploader() {
                 accept={videoAcceptTypes}
                 maxLocalFileSizeBytes={maximumVideoSizeBytes}
                 sourceList="local"
-                className="uploadcare-dropzone uc-light uc-radius-medium mt-3 block min-h-12"
+                className="uploadcare-dropzone uc-dark uc-radius-medium"
                 localeDefinitionOverride={{
                   en: {
                     "choose-file": "Choose video",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import type {
   TransformationHistoryItem,
@@ -8,6 +9,7 @@ import type {
   TransformationHistoryProps,
   TransformationHistoryResponse,
   TransformationHistoryStatus,
+  StatusTooltip,
 } from "@/components/TransformationHistory/TransformationHistory.types";
 import { transformationHistoryRefreshEvent } from "@/shared/browserEvents";
 import { getCloudinaryVideoThumbnailUrl } from "@/shared/cloudinaryMedia";
@@ -115,14 +117,22 @@ function getProjectContext(transformation: TransformationHistoryItem) {
 
 function getStatusClasses(status: TransformationHistoryStatus) {
   if (status === "failed") {
-    return "bg-rose-500 ring-rose-100";
+    return "bg-rose-400 ring-rose-100";
   }
 
   if (status === "completed") {
     return "bg-emerald-500 ring-emerald-100";
   }
 
-  return "bg-violet-500 ring-violet-100";
+  if (status === "queued") {
+    return "bg-amber-400 ring-amber-100";
+  }
+
+  if (status === "ready" || status === "submitting" || status === "processing" || status === "saving_output") {
+    return "bg-sky-400 ring-sky-100";
+  }
+
+  return "bg-slate-400 ring-slate-100";
 }
 
 export default function TransformationHistory({
@@ -138,10 +148,26 @@ export default function TransformationHistory({
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<TransformationHistoryFilter>("all");
+  const [statusTooltip, setStatusTooltip] = useState<StatusTooltip | null>(null);
   const isMountedRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const inFlightRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const showStatusTooltip = useCallback((
+    target: HTMLElement,
+    label: string,
+    status: TransformationHistoryStatus,
+  ) => {
+    const { bottom, right, top } = target.getBoundingClientRect();
+
+    setStatusTooltip({
+      label,
+      left: right + 12,
+      status,
+      top: top + (bottom - top) / 2,
+    });
+  }, []);
 
   const loadHistory = useCallback(async ({ manual = false }: { manual?: boolean } = {}) => {
     if (inFlightRef.current) {
@@ -289,7 +315,7 @@ export default function TransformationHistory({
       <button
         type="button"
         onClick={onStartNewTransformation}
-        className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-3 py-2 text-sm font-semibold text-white shadow-sm shadow-violet-200 transition hover:bg-violet-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+        className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-3 py-2 text-sm font-semibold text-white shadow-[0_8px_20px_rgb(109_40_217_/_28%)] transition hover:bg-violet-500 hover:shadow-[0_12px_28px_rgb(124_58_237_/_38%)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
       >
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" className="size-4" aria-hidden="true">
           <path d="M10 4v12M4 10h12" strokeLinecap="round" />
@@ -321,7 +347,7 @@ export default function TransformationHistory({
             aria-pressed={statusFilter === filter.value}
             className={`min-h-8 rounded-lg px-1.5 text-xs font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600 ${
               statusFilter === filter.value
-                ? "bg-slate-900 text-white shadow-sm"
+                ? "bg-violet-600 text-white shadow-[0_6px_16px_rgb(109_40_217_/_32%)]"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
             }`}
           >
@@ -378,10 +404,14 @@ export default function TransformationHistory({
                 key={transformation.id}
                 type="button"
                 onClick={() => onSelectTransformation(transformation)}
+                onMouseEnter={(event) => showStatusTooltip(event.currentTarget, statusLabels[transformation.status], transformation.status)}
+                onMouseLeave={() => setStatusTooltip(null)}
+                onFocus={(event) => showStatusTooltip(event.currentTarget, statusLabels[transformation.status], transformation.status)}
+                onBlur={() => setStatusTooltip(null)}
                 aria-current={selectedTransformationId === transformation.id ? "true" : undefined}
                 className={`group flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-violet-600 ${
                   selectedTransformationId === transformation.id
-                    ? "border-violet-200 bg-violet-50 shadow-sm shadow-violet-100"
+                    ? "border-violet-400/50 bg-[#21143f] shadow-[0_8px_20px_rgb(76_29_149_/_28%)]"
                     : "border-transparent hover:border-slate-200 hover:bg-slate-50"
                 }`}
               >
@@ -411,13 +441,14 @@ export default function TransformationHistory({
                     {getProjectContext(transformation)} · {formatDate(transformation.createdAt)}
                   </span>
                 </span>
-                <span
-                  className={`size-1.5 shrink-0 rounded-full ring-2 ${getStatusClasses(transformation.status)} ${automaticallyUpdatedStatuses.has(transformation.status) ? "animate-pulse motion-reduce:animate-none" : ""}`}
-                  title={statusLabels[transformation.status]}
-                  aria-label={statusLabels[transformation.status]}
-                  role="status"
-                >
-                  <span className="sr-only">{statusLabels[transformation.status]}</span>
+                <span className="flex size-5 shrink-0 items-center justify-center">
+                  <span
+                    className={`size-1.5 rounded-full ring-2 ${getStatusClasses(transformation.status)} ${automaticallyUpdatedStatuses.has(transformation.status) ? "animate-pulse motion-reduce:animate-none" : ""}`}
+                    aria-label={statusLabels[transformation.status]}
+                    role="status"
+                  >
+                    <span className="sr-only">{statusLabels[transformation.status]}</span>
+                  </span>
                 </span>
               </button>
             );
@@ -425,6 +456,17 @@ export default function TransformationHistory({
         </div>
       )}
       </div>
+      {statusTooltip && createPortal(
+        <span
+          role="tooltip"
+          className="pointer-events-none fixed z-[60] -translate-y-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c1c2b] px-2 py-1 text-[10px] font-medium text-slate-200 shadow-lg shadow-black/40"
+          style={{ left: statusTooltip.left, top: statusTooltip.top }}
+        >
+          <span className={`mr-1.5 inline-block size-1.5 rounded-full align-middle ring-2 ${getStatusClasses(statusTooltip.status)}`} aria-hidden="true" />
+          {statusTooltip.label}
+        </span>,
+        document.body,
+      )}
     </section>
   );
 }

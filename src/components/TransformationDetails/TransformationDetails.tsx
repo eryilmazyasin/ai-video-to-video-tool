@@ -203,20 +203,44 @@ function TransformationProgress({
   const currentStepIndex = getProgressStepIndex(status, errorStage);
   const isCompleted = status === "completed";
   const isFailed = status === "failed";
+  const [isProgressCollapsed, setIsProgressCollapsed] = useState(isCompleted);
 
   return (
     <section className="border-b border-violet-100 bg-violet-50/70 px-5 py-5 sm:px-6" aria-labelledby="transformation-progress-title" aria-live="polite">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="transformation-progress-title" className="text-sm font-semibold text-slate-950">Transformation progress</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500 sm:hidden">Live status from the AI service.</p>
-          <p className="mt-1 hidden text-xs leading-5 text-slate-500 sm:block">This view updates automatically as the provider sends status updates.</p>
+          {isCompleted ? (
+            <p className="mt-1 text-xs leading-5 text-slate-500">Your generated image is ready.</p>
+          ) : (
+            <>
+              <p className="mt-1 text-xs leading-5 text-slate-500 sm:hidden">Live status from the AI service.</p>
+              <p className="mt-1 hidden text-xs leading-5 text-slate-500 sm:block">This view updates automatically as the provider sends status updates.</p>
+            </>
+          )}
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${isFailed ? "bg-rose-50 text-rose-700" : isCompleted ? "bg-emerald-50 text-emerald-700" : "bg-sky-50 text-sky-700"}`}>
-          {statusLabels[status]}
-        </span>
+        <div className="flex shrink-0 items-end gap-2 sm:items-center">
+          {isCompleted && (
+            <button
+              type="button"
+              onClick={() => setIsProgressCollapsed((isCollapsed) => !isCollapsed)}
+              aria-expanded={!isProgressCollapsed}
+              aria-controls="transformation-progress-steps"
+              className="text-xs font-medium text-violet-700 transition hover:text-violet-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600"
+            >
+              {isProgressCollapsed ? "Show progress" : "Hide progress"}
+            </button>
+          )}
+          {!isCompleted && (
+            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${isFailed ? "bg-rose-50 text-rose-700" : "bg-sky-50 text-sky-700"}`}>
+              {statusLabels[status]}
+            </span>
+          )}
+        </div>
       </div>
-      <ol className="mt-5 space-y-3 sm:hidden" aria-label="Transformation steps">
+      {!isProgressCollapsed && (
+        <div id="transformation-progress-steps">
+          <ol className="mt-5 space-y-3 sm:hidden" aria-label="Transformation steps">
         {progressSteps.map((step, index) => {
           const isCurrentStep = index === currentStepIndex && !isCompleted && !isFailed;
           const isCompletedStep = index < currentStepIndex || isCompleted;
@@ -242,8 +266,8 @@ function TransformationProgress({
             </li>
           );
         })}
-      </ol>
-      <ol className="mt-5 hidden gap-3 sm:grid sm:grid-cols-5 sm:gap-2">
+          </ol>
+          <ol className="mt-5 hidden gap-3 sm:grid sm:grid-cols-5 sm:gap-2">
         {progressSteps.map((step, index) => {
           const isCurrentStep = index === currentStepIndex && !isCompleted && !isFailed;
           const isCompletedStep = index < currentStepIndex || isCompleted;
@@ -278,7 +302,9 @@ function TransformationProgress({
             </li>
           );
         })}
-      </ol>
+          </ol>
+        </div>
+      )}
     </section>
   );
 }
@@ -352,6 +378,7 @@ export default function TransformationDetails({
 
         {(isActive || isCompleted || transformation.status === "failed") && (
           <TransformationProgress
+            key={`${transformation.status}-${transformation.error?.stage ?? ""}`}
             status={transformation.status}
             errorStage={transformation.error?.stage}
           />

@@ -88,7 +88,15 @@ function ImagePanel({
 
       {url ? (
         <div className={`relative z-10 mt-4 overflow-hidden rounded-lg bg-slate-950 ${isGenerated ? "min-h-72 sm:min-h-[32rem] ring-1 ring-violet-300/30 shadow-[0_12px_28px_rgb(0_0_0_/_34%)]" : "aspect-square"}`}>
-          <Image fill sizes="100vw" src={url} alt={`${label} preview`} className="object-contain" />
+          <Image
+            fill
+            // The result card is narrower than the viewport because of the app shell and panel padding.
+            sizes="(max-width: 639px) calc(100vw - 4rem), (max-width: 1023px) calc(100vw - 6rem), (max-width: 1279px) calc(100vw - 25rem), 960px"
+            loading={isGenerated ? "eager" : "lazy"}
+            src={url}
+            alt={`${label} preview`}
+            className="object-contain"
+          />
           {downloadUrl && (
             <a
               href={downloadUrl}
@@ -456,7 +464,13 @@ export default function TransformationDetails({
               <button type="button" onClick={() => setIsSourcePreviewOpen(false)} className="rounded-lg px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-600">Close</button>
             </div>
             <div className="relative min-h-72 flex-1 bg-slate-950" style={{ height: "min(72vh, 48rem)" }}>
-              <Image fill sizes="100vw" src={sourceImage.url} alt="Source image preview" className="object-contain" />
+              <Image
+                fill
+                sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(100vw - 4rem), 960px"
+                src={sourceImage.url}
+                alt="Source image preview"
+                className="object-contain"
+              />
             </div>
           </div>
         </div>

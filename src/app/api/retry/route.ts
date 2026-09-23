@@ -1,16 +1,12 @@
-import { z } from "zod";
 import { ObjectId } from "mongodb";
 
 import { getAnonymousOwner, setAnonymousOwnerCookie } from "@/server/auth/anonymousOwner";
 import { resetRetryableTransformation } from "@/server/db-actions/transformationActions";
+import { retryRequestSchema } from "@/server/schemas/transformationSchemas";
 
 import { NextResponse, type NextRequest } from "next/server";
 
 export const runtime = "nodejs";
-
-const retryRequestSchema = z.object({
-  transformationId: z.string().trim().regex(/^[a-f\d]{24}$/i),
-}).strict();
 
 export async function POST(request: NextRequest) {
   let body: unknown;

@@ -5,16 +5,10 @@ import {
 import { uploadSourceImageFromUrl } from "@/server/clients/cloudinaryClient";
 import { getUploadcareFileInfo } from "@/server/clients/uploadcareClient";
 import { createReadyTransformation } from "@/server/db-actions/transformationActions";
+import { uploadRequestSchema } from "@/server/schemas/transformationSchemas";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 
 export const runtime = "nodejs";
-
-const uploadRequestSchema = z
-  .object({
-    uploadcareUuid: z.string().trim().uuid(),
-  })
-  .strict();
 
 const supportedMimeTypes = new Set([
   "image/jpeg",

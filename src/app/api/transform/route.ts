@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import { getAnonymousOwner } from "@/server/auth/anonymousOwner";
 import {
   createMagicHourImageToImage,
@@ -14,31 +12,17 @@ import {
   markQueued,
   resetRetryableTransformation,
 } from "@/server/db-actions/transformationActions";
+import {
+  transformRequestSchema,
+  type TransformRequestInput,
+} from "@/server/schemas/transformationSchemas";
 import type { TransformationRequest } from "@/server/types/transformation.types";
-import { getImageToImageResolutions, imageToImageAspectRatios, imageToImageModels, imageToImageResolutions } from "@/shared/imageToImageOptions";
 
 import { NextResponse, type NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 
-const maximumNameLength = 100;
-const maximumPromptLength = 1_000;
-
-const transformRequestSchema = z.object({
-  transformationId: z.string().trim().regex(/^[a-f\d]{24}$/i),
-  name: z.string().trim().min(1).max(maximumNameLength).optional(),
-  aspectRatio: z.enum(imageToImageAspectRatios).optional(),
-  imageCount: z.union([z.literal(1), z.literal(4), z.literal(9), z.literal(16)]).optional(),
-  model: z.enum(imageToImageModels).optional(),
-  resolution: z.enum(imageToImageResolutions).optional(),
-  style: z.object({ prompt: z.string().trim().min(1).max(maximumPromptLength) }).strict(),
-}).strict().superRefine((value, context) => {
-  if (value.model && value.resolution && !getImageToImageResolutions(value.model).includes(value.resolution)) {
-    context.addIssue({ code: "custom", path: ["resolution"], message: "The selected resolution is not supported by this model." });
-  }
-});
-
-function getSubmissionRequest(input: z.infer<typeof transformRequestSchema>): TransformationRequest {
+function getSubmissionRequest(input: TransformRequestInput): TransformationRequest {
   return {
     ...(input.name ? { name: input.name } : {}),
     ...(input.aspectRatio ? { aspectRatio: input.aspectRatio } : {}),

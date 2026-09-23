@@ -1,15 +1,9 @@
-import { z } from "zod";
-
 import { getExistingAnonymousOwner } from "@/server/auth/anonymousOwner";
 import { findByIdForOwner } from "@/server/db-actions/transformationActions";
+import { downloadQuerySchema } from "@/server/schemas/transformationSchemas";
 import { NextResponse, type NextRequest } from "next/server";
 
 export const runtime = "nodejs";
-
-const downloadQuerySchema = z.object({
-  transformationId: z.string().regex(/^[a-f\d]{24}$/i),
-  outputIndex: z.coerce.number().int().min(0).max(15),
-});
 
 function getImageExtension(contentType: string) {
   if (contentType === "image/png") return "png";

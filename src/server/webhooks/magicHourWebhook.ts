@@ -2,8 +2,13 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-import { z } from "zod";
-
+import {
+  magicHourEventEnvelopeSchema,
+  magicHourImageCompletedEventSchema,
+  magicHourImageErroredEventSchema,
+  magicHourImageStartedEventSchema,
+  type MagicHourImageEventPayloadInput,
+} from "@/server/schemas/magicHourWebhookSchemas";
 import type {
   MagicHourImageCompletedEvent,
   MagicHourImageErroredEvent,
@@ -18,36 +23,7 @@ const webhookTimestampToleranceSeconds = 300;
 const hexSignaturePattern = /^[a-f\d]{64}$/i;
 const unixTimestampPattern = /^\d{1,12}$/;
 
-const imageEventPayloadSchema = z
-  .object({
-    id: z.string().min(1).max(128),
-    status: z.string().min(1).max(100),
-    credits_charged: z.number().finite().nonnegative().optional(),
-  })
-  .passthrough();
-
-const imageStartedEventSchema = z.object({
-  type: z.literal("image.started"),
-  payload: imageEventPayloadSchema,
-});
-
-const imageErroredEventSchema = z.object({
-  type: z.literal("image.errored"),
-  payload: imageEventPayloadSchema,
-});
-
-const imageCompletedEventSchema = z.object({
-  type: z.literal("image.completed"),
-  payload: imageEventPayloadSchema.extend({
-    downloads: z.array(z.object({ url: z.string().min(1).max(2_048) })).min(1).max(16),
-  }),
-});
-
-const eventEnvelopeSchema = z
-  .object({ type: z.string().min(1).max(100), payload: z.unknown().optional() })
-  .passthrough();
-
-function toImageEventPayload(payload: z.infer<typeof imageEventPayloadSchema>): MagicHourImageEventPayload {
+function toImageEventPayload(payload: MagicHourImageEventPayloadInput): MagicHourImageEventPayload {
   return {
     id: payload.id,
     status: payload.status,
@@ -154,14 +130,14 @@ export function parseMagicHourWebhookEvent(rawBody: string) {
     return null;
   }
 
-  const envelope = eventEnvelopeSchema.safeParse(parsedBody);
+  const envelope = magicHourEventEnvelopeSchema.safeParse(parsedBody);
 
   if (!envelope.success) {
     return null;
   }
 
   if (envelope.data.type === "image.started") {
-    const event = imageStartedEventSchema.safeParse(envelope.data);
+    const event = magicHourImageStartedEventSchema.safeParse(envelope.data);
 
     return event.success
       ? ({
@@ -172,7 +148,7 @@ export function parseMagicHourWebhookEvent(rawBody: string) {
   }
 
   if (envelope.data.type === "image.errored") {
-    const event = imageErroredEventSchema.safeParse(envelope.data);
+    const event = magicHourImageErroredEventSchema.safeParse(envelope.data);
 
     return event.success
       ? ({
@@ -183,7 +159,7 @@ export function parseMagicHourWebhookEvent(rawBody: string) {
   }
 
   if (envelope.data.type === "image.completed") {
-    const event = imageCompletedEventSchema.safeParse(envelope.data);
+    const event = magicHourImageCompletedEventSchema.safeParse(envelope.data);
 
     return event.success
       ? ({

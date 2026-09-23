@@ -17,7 +17,6 @@ import { magicHourContentGuidelinesMessage } from "@/server/webhooks/magicHourPr
 
 export const runtime = "nodejs";
 
-const historyLimit = 12;
 const synchronizableStatuses = new Set(["queued", "processing", "saving_output"]);
 const providerStatusTimeoutMilliseconds = 5 * 60 * 1_000;
 
@@ -162,11 +161,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const initialTransformations = await listRecentForOwner(ownerId, historyLimit);
+    const initialTransformations = await listRecentForOwner(ownerId);
 
     // Reconcile active projects so a missed provider webhook is recoverable after refresh.
     await reconcileActiveTransformations(initialTransformations);
-    const transformations = await listRecentForOwner(ownerId, historyLimit);
+    const transformations = await listRecentForOwner(ownerId);
 
     return NextResponse.json({
       transformations: transformations.map(serializeTransformation),

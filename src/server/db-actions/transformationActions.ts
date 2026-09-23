@@ -80,14 +80,12 @@ export async function findByIdForOwner(
   });
 }
 
-export async function listRecentForOwner(ownerId: string, limit: number) {
+export async function listRecentForOwner(ownerId: string) {
   const collection = await getTransformationCollection();
-  const safeLimit = Math.min(Math.max(limit, 1), 20);
 
   return collection
     .find({ ownerId })
     .sort({ createdAt: -1 })
-    .limit(safeLimit)
     .toArray();
 }
 

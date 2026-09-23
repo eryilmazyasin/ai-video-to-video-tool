@@ -151,7 +151,12 @@ export default function TransformationHistory({
           (item) => item.id === selectedTransformationIdRef.current,
         );
 
-        if (!isCreatingNewRef.current && !selectedTransformation && body.transformations[0]) {
+        if (
+          !isCreatingNewRef.current &&
+          selectedTransformationIdRef.current &&
+          !selectedTransformation &&
+          body.transformations[0]
+        ) {
           onSelectTransformationRef.current(body.transformations[0]);
         }
         setError(null);

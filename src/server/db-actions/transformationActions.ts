@@ -8,6 +8,8 @@ import type {
   TransformationError,
   TransformationRequest,
 } from "@/server/types/transformation.types";
+import type { MagicHourImageProject } from "@/server/clients/magicHourClient.types";
+import { getMagicHourProcessingError } from "@/server/webhooks/magicHourProcessingError";
 
 const collectionName = "transformations";
 let indexInitializationPromise: Promise<void> | undefined;
@@ -334,23 +336,29 @@ export async function markOutputCopyFailed(
 export async function markProviderErrored(
   providerJobId: string,
   rawStatus: string,
+  providerError: MagicHourImageProject["error"],
+  creditsCharged?: number,
 ) {
   const collection = await getTransformationCollection();
   const now = new Date();
 
-  // Provider error text is untrusted, so persist a fixed safe error instead.
+  // Provider error text is untrusted, so map it to a safe user-facing category.
   return collection.findOneAndUpdate(
-    { "provider.jobId": providerJobId, status: { $in: ["queued", "processing"] } },
+    {
+      "provider.jobId": providerJobId,
+      $or: [
+        { status: { $in: ["queued", "processing"] } },
+        { status: "failed", "error.code": "provider_processing_failed" },
+      ],
+    },
     {
       $set: {
         status: "failed",
         "provider.rawStatus": rawStatus,
-        error: {
-          stage: "processing",
-          code: "provider_processing_failed",
-          message: "The transformation could not be completed.",
-          retryable: false,
-        },
+        ...(creditsCharged !== undefined
+          ? { "provider.creditsCharged": creditsCharged }
+          : {}),
+        error: getMagicHourProcessingError(providerError),
         updatedAt: now,
       },
     },

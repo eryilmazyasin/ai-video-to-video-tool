@@ -1,4 +1,5 @@
 import { getMagicHourWebhookEnv } from "@/server/config/env";
+import { getMagicHourImageProject } from "@/server/clients/magicHourClient";
 import {
   findByProviderJobId,
   markProcessingByProviderJobId,
@@ -92,10 +93,24 @@ async function handleImageEvent(event: MagicHourImageEvent) {
   }
 
   if (event.type === "image.errored") {
+    let providerError = null;
+    let creditsCharged = event.payload.creditsCharged;
+
+    try {
+      const project = await getMagicHourImageProject(event.payload.id);
+
+      providerError = project.error;
+      creditsCharged = project.creditsCharged;
+    } catch {
+      // The webhook still records a generic failure if the detail lookup is unavailable.
+    }
+
     try {
       const failedTransformation = await markProviderErrored(
         event.payload.id,
         event.payload.status,
+        providerError,
+        creditsCharged,
       );
 
       if (!failedTransformation) {

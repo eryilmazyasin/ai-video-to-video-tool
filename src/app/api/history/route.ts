@@ -13,6 +13,7 @@ import type {
   TransformationError,
 } from "@/server/types/transformation.types";
 import { completeMagicHourImage } from "@/server/webhooks/magicHourImageCompletion";
+import { magicHourContentGuidelinesMessage } from "@/server/webhooks/magicHourProcessingError";
 
 export const runtime = "nodejs";
 
@@ -23,8 +24,10 @@ const providerStatusTimeoutMilliseconds = 5 * 60 * 1_000;
 function shouldReconcileTransformation(transformation: TransformationDocument) {
   return synchronizableStatuses.has(transformation.status) || (
     transformation.status === "failed" &&
-    transformation.error?.stage === "output" &&
-    transformation.error.retryable
+    (
+      (transformation.error?.stage === "output" && transformation.error.retryable) ||
+      transformation.error?.code === "provider_processing_failed"
+    )
   );
 }
 
@@ -65,7 +68,12 @@ async function reconcileTransformation(transformation: TransformationDocument) {
     }
 
     if (project.status === "error") {
-      await markProviderErrored(project.id, project.status);
+      await markProviderErrored(
+        project.id,
+        project.status,
+        project.error,
+        project.creditsCharged,
+      );
       return;
     }
 
@@ -98,6 +106,7 @@ function getSafeError(error: TransformationError) {
     plan_upgrade_required: "Your Magic Hour plan does not support these settings. Use a free-tier model at 640px or upgrade your plan.",
     invalid_image_settings: "Magic Hour rejected these settings. Try fewer results or a different model or resolution.",
     provider_processing_failed: "The transformation could not be completed.",
+    provider_content_guidelines: magicHourContentGuidelinesMessage,
     output_copy_failed: "The generated image could not be saved. Retrying automatically.",
     provider_status_timeout: "The transformation took longer than expected. Please try again.",
   };

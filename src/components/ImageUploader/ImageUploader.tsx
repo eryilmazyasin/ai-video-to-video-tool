@@ -9,7 +9,6 @@ import Image from "next/image";
 import TransformationForm from "@/components/TransformationForm/TransformationForm";
 import type {
   PreparedSourceImage,
-  UploadApiResponse,
   UploadcareFailedEntry,
   UploadcareIdleEntry,
   UploadcareSuccessEntry,
@@ -17,49 +16,15 @@ import type {
   UploadStage,
   ImageUploaderProps,
 } from "@/components/ImageUploader/ImageUploader.types";
+import {
+  getUploadcareErrorMessage,
+  isUploadApiResponse,
+} from "@/components/ImageUploader/ImageUploader.helpers";
 import { transformationHistoryRefreshEvent } from "@/shared/browserEvents";
+import { formatFileSize } from "@/shared/fileFormatting";
 
 const maximumImageSizeBytes = 20 * 1024 * 1024;
 const imageAcceptTypes = "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp";
-
-function formatFileSize(bytes: number) {
-  if (bytes < 1024 * 1024) {
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  }
-
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function getUploadcareErrorMessage(entry: UploadcareFailedEntry) {
-  const message = entry.errors[0]?.message;
-
-  return message || "Uploadcare could not upload this image. Please try again.";
-}
-
-function isUploadApiResponse(value: unknown): value is UploadApiResponse {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const transformation = (value as Record<string, unknown>).transformation;
-
-  if (!transformation || typeof transformation !== "object") {
-    return false;
-  }
-
-  const sourceImage = (transformation as Record<string, unknown>).sourceImage;
-
-  return Boolean(
-    sourceImage &&
-      typeof sourceImage === "object" &&
-      typeof (transformation as Record<string, unknown>).id === "string" &&
-      (transformation as Record<string, unknown>).status === "ready" &&
-      typeof (sourceImage as Record<string, unknown>).url === "string" &&
-      typeof (sourceImage as Record<string, unknown>).originalName === "string" &&
-      typeof (sourceImage as Record<string, unknown>).mimeType === "string" &&
-      typeof (sourceImage as Record<string, unknown>).bytes === "number",
-  );
-}
 
 export default function ImageUploader({ onTransformationQueued }: ImageUploaderProps) {
   const publicKey = process.env.NEXT_PUBLIC_UPLOADCARE_PUBLIC_KEY;

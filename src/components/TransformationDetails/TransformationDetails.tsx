@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 
 import TransformationForm from "@/components/TransformationForm/TransformationForm";
+import { getProgressStepIndex } from "@/components/TransformationDetails/TransformationDetails.helpers";
 import type {
   SourceImageListItemProps,
   TransformationDetailsProps,
@@ -12,6 +13,8 @@ import type {
 } from "@/components/TransformationDetails/TransformationDetails.types";
 import type { TransformationHistoryStatus } from "@/components/TransformationHistory/TransformationHistory.types";
 import { transformationHistoryRefreshEvent } from "@/shared/browserEvents";
+import { formatDateTime } from "@/shared/dateFormatting";
+import { formatFileSize } from "@/shared/fileFormatting";
 
 const statusLabels = {
   staging: "Preparing source",
@@ -58,44 +61,6 @@ const progressSteps = [
   { label: "Saving result", description: "Preparing the final file." },
   { label: "Complete", description: "Your image is ready." },
 ] as const;
-
-function formatDate(date: string) {
-  const value = new Date(date);
-
-  if (Number.isNaN(value.getTime())) {
-    return "Date unavailable";
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(value);
-}
-
-function formatFileSize(bytes: number) {
-  if (bytes < 1024 * 1024) {
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  }
-
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function getProgressStepIndex(
-  status: TransformationHistoryStatus,
-  errorStage?: "upload" | "submission" | "processing" | "output",
-) {
-  if (status === "staging" || status === "ready") return 0;
-  if (status === "submitting" || status === "queued") return 1;
-  if (status === "processing") return 2;
-  if (status === "saving_output") return 3;
-  if (status === "completed") return 4;
-
-  if (errorStage === "submission") return 1;
-  if (errorStage === "processing") return 2;
-  if (errorStage === "output") return 3;
-
-  return 0;
-}
 
 function ImagePanel({
   label,
@@ -356,7 +321,7 @@ export default function TransformationDetails({
             <h1 id="transformation-details-title" className="mt-2 truncate text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
               {transformation.status === "ready" ? "Source ready" : request?.name || sourceImage.originalName}
             </h1>
-            <p className="mt-2 text-sm text-slate-400">{transformation.status === "ready" ? "Review your image, then configure its new visual direction." : `Created ${formatDate(transformation.createdAt)}`}</p>
+            <p className="mt-2 text-sm text-slate-400">{transformation.status === "ready" ? "Review your image, then configure its new visual direction." : `Created ${formatDateTime(transformation.createdAt)}`}</p>
           </div>
           <span className={`inline-flex min-w-36 items-center justify-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ring-1 ${statusClasses[transformation.status]}`}>
             <span className={`size-1.5 rounded-full bg-current ${isActive ? "animate-pulse motion-reduce:animate-none" : ""}`} aria-hidden="true" />
@@ -477,8 +442,8 @@ export default function TransformationDetails({
         )}
 
         <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-5 py-3 text-xs text-slate-400 sm:px-6">
-          <span>Last updated {formatDate(transformation.updatedAt)}</span>
-          {transformation.completedAt && <span>Completed {formatDate(transformation.completedAt)}</span>}
+          <span>Last updated {formatDateTime(transformation.updatedAt)}</span>
+          {transformation.completedAt && <span>Completed {formatDateTime(transformation.completedAt)}</span>}
         </footer>
       </section>
 

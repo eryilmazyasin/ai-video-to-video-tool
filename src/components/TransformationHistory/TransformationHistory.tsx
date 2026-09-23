@@ -8,12 +8,18 @@ import type {
   TransformationHistoryItem,
   TransformationHistoryFilter,
   TransformationHistoryProps,
-  TransformationHistoryResponse,
   TransformationHistoryStatus,
   StatusTooltip,
 } from "@/components/TransformationHistory/TransformationHistory.types";
+import {
+  getHistoryErrorMessage,
+  getProjectContext,
+  getStatusClasses,
+  isTransformationHistoryResponse,
+} from "@/components/TransformationHistory/TransformationHistory.helpers";
 import { transformationHistoryRefreshEvent } from "@/shared/browserEvents";
 import { getCloudinaryImageThumbnailUrl } from "@/shared/cloudinaryMedia";
+import { formatRelativeDate } from "@/shared/dateFormatting";
 
 const historyPollIntervalMilliseconds = 4_500;
 
@@ -41,96 +47,6 @@ const statusFilters: { value: TransformationHistoryFilter; label: string }[] = [
   { value: "completed", label: "Done" },
   { value: "failed", label: "Issues" },
 ];
-
-function isTransformationHistoryResponse(
-  value: unknown,
-): value is TransformationHistoryResponse {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const transformations = (value as Record<string, unknown>).transformations;
-
-  return Array.isArray(transformations) && transformations.every((item) => {
-    if (!item || typeof item !== "object") {
-      return false;
-    }
-
-    const itemRecord = item as Record<string, unknown>;
-    const sourceImage = itemRecord.sourceImage;
-
-    return (
-      typeof itemRecord.id === "string" &&
-      typeof itemRecord.status === "string" &&
-      sourceImage !== null &&
-      typeof sourceImage === "object"
-    );
-  });
-}
-
-function getErrorMessage(value: unknown) {
-  if (
-    value &&
-    typeof value === "object" &&
-    typeof (value as Record<string, unknown>).error === "string"
-  ) {
-    return (value as Record<string, string>).error;
-  }
-
-  return "Your transformation history could not be loaded. Please try again.";
-}
-
-function formatDate(date: string) {
-  const value = new Date(date);
-
-  if (Number.isNaN(value.getTime())) {
-    return "Date unavailable";
-  }
-
-  const today = new Date();
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const startOfDate = new Date(value.getFullYear(), value.getMonth(), value.getDate());
-  const daysAgo = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86_400_000);
-
-  if (daysAgo === 0) {
-    return "Today";
-  }
-
-  if (daysAgo === 1) {
-    return "Yesterday";
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-  }).format(value);
-}
-
-function getProjectContext(transformation: TransformationHistoryItem) {
-  return transformation.request?.model && transformation.request.model !== "default"
-    ? transformation.request.model
-    : "Image project";
-}
-
-function getStatusClasses(status: TransformationHistoryStatus) {
-  if (status === "failed") {
-    return "bg-rose-400 ring-rose-100";
-  }
-
-  if (status === "completed") {
-    return "bg-emerald-500 ring-emerald-100";
-  }
-
-  if (status === "queued") {
-    return "bg-amber-400 ring-amber-100";
-  }
-
-  if (status === "ready" || status === "submitting" || status === "processing" || status === "saving_output") {
-    return "bg-sky-400 ring-sky-100";
-  }
-
-  return "bg-slate-400 ring-slate-100";
-}
 
 export default function TransformationHistory({
   selectedTransformationId,
@@ -225,7 +141,7 @@ export default function TransformationHistory({
       const body: unknown = await response.json().catch(() => null);
 
       if (!response.ok || !isTransformationHistoryResponse(body)) {
-        throw new Error(getErrorMessage(body));
+        throw new Error(getHistoryErrorMessage(body));
       }
 
       if (isMountedRef.current) {
@@ -474,7 +390,7 @@ export default function TransformationHistory({
                     {transformation.request?.name || transformation.sourceImage.originalName}
                   </span>
                   <span className="mt-1 block truncate text-xs text-slate-400">
-                    {getProjectContext(transformation)} · {formatDate(transformation.createdAt)}
+                    {getProjectContext(transformation)} · {formatRelativeDate(transformation.createdAt)}
                   </span>
                 </span>
                 <span className="flex size-5 shrink-0 items-center justify-center">

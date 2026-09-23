@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Image-to-Image Tool",
+  title: "Demo",
   description: "Transform images with AI.",
 };
 

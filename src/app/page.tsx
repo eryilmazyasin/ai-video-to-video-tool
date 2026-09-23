@@ -145,7 +145,7 @@ export default function Home() {
           </svg>
           Projects
         </button>
-        <span className="text-sm font-semibold tracking-tight text-slate-950">FrameShift</span>
+        <span className="text-sm font-semibold tracking-tight text-slate-950">Demo</span>
         <button
           type="button"
           onClick={handleStartNewTransformation}
@@ -179,9 +179,9 @@ export default function Home() {
       >
         <div className="flex h-20 shrink-0 items-center justify-between border-b border-white/10 px-5">
           <div className="flex items-center gap-3">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-violet-600 text-sm font-bold text-white shadow-sm shadow-violet-200">F</span>
+            <span className="flex size-9 items-center justify-center rounded-xl bg-violet-600 text-sm font-bold text-white shadow-sm shadow-violet-200">D</span>
             <div>
-              <p id="history-sidebar-brand" className="text-sm font-semibold tracking-tight text-slate-950">FrameShift</p>
+              <p id="history-sidebar-brand" className="text-sm font-semibold tracking-tight text-slate-950">Demo</p>
               <p className="text-xs text-slate-500">Image studio</p>
             </div>
           </div>

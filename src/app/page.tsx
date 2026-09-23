@@ -130,7 +130,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="dark-app min-h-[100dvh] bg-[#09090f] text-slate-100 lg:flex">
+    <main className="dark-app min-h-[100dvh] bg-[#09090f] text-slate-100 lg:flex lg:h-[100dvh] lg:min-h-0 lg:overflow-hidden">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-[#0c0c14]/95 px-4 backdrop-blur lg:hidden">
         <button
           ref={historyButtonRef}
@@ -170,7 +170,7 @@ export default function Home() {
       <aside
         ref={historyDrawerRef}
         id="history-sidebar"
-        className={`fixed inset-y-0 left-0 z-50 min-h-0 w-[min(22rem,calc(100vw-2rem))] flex-col border-r border-white/10 bg-[#10101a] shadow-2xl shadow-black/40 transition-transform duration-200 lg:sticky lg:top-0 lg:z-0 lg:flex lg:h-screen lg:w-[280px] lg:shrink-0 lg:translate-x-0 lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 min-h-0 w-[min(22rem,calc(100vw-2rem))] flex-col border-r border-white/10 bg-[#10101a] shadow-2xl shadow-black/40 transition-transform duration-200 lg:static lg:z-0 lg:flex lg:h-full lg:w-[280px] lg:shrink-0 lg:translate-x-0 lg:shadow-none ${
           isHistoryDrawerOpen ? "flex translate-x-0" : "hidden -translate-x-full"
         }`}
         role={isHistoryDrawerOpen ? "dialog" : undefined}
@@ -206,7 +206,7 @@ export default function Home() {
         />
       </aside>
 
-      <section className="min-w-0 flex-1 px-4 pb-8 pt-8 sm:px-8 sm:pb-10 sm:pt-10 lg:px-12 lg:pb-14 lg:pt-14 xl:px-16">
+      <section className="min-w-0 flex-1 px-4 pb-8 pt-8 sm:px-8 sm:pb-10 sm:pt-10 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:px-12 lg:pb-14 lg:pt-14 xl:px-16">
         <div className="mx-auto w-full max-w-5xl">
           {selectedTransformation ? (
             <TransformationDetails transformation={selectedTransformation} />

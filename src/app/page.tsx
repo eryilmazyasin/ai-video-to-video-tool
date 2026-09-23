@@ -206,7 +206,7 @@ export default function Home() {
         />
       </aside>
 
-      <section className="min-w-0 flex-1 px-4 pb-72 pt-8 sm:px-8 sm:pb-72 sm:pt-10 lg:px-12 lg:pb-72 lg:pt-14 xl:px-16">
+      <section className="min-w-0 flex-1 px-4 pb-8 pt-8 sm:px-8 sm:pb-10 sm:pt-10 lg:px-12 lg:pb-14 lg:pt-14 xl:px-16">
         <div className="mx-auto w-full max-w-5xl">
           {selectedTransformation ? (
             <TransformationDetails transformation={selectedTransformation} />

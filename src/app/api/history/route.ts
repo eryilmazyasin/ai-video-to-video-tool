@@ -6,6 +6,7 @@ import {
   listRecentForOwner,
   markProcessingByProviderJobId,
   markProviderErrored,
+  markTimedOutByProviderJobId,
 } from "@/server/db-actions/transformationActions";
 import type {
   TransformationDocument,
@@ -17,6 +18,15 @@ export const runtime = "nodejs";
 
 const historyLimit = 12;
 const synchronizableStatuses = new Set(["queued", "processing", "saving_output"]);
+const providerStatusTimeoutMilliseconds = 5 * 60 * 1_000;
+
+function shouldReconcileTransformation(transformation: TransformationDocument) {
+  return synchronizableStatuses.has(transformation.status) || (
+    transformation.status === "failed" &&
+    transformation.error?.stage === "output" &&
+    transformation.error.retryable
+  );
+}
 
 function hasOnlyHttpsDownloads(downloads: Array<{ url: string }>) {
   try {
@@ -28,7 +38,7 @@ function hasOnlyHttpsDownloads(downloads: Array<{ url: string }>) {
 
 async function reconcileTransformation(transformation: TransformationDocument) {
   if (
-    !synchronizableStatuses.has(transformation.status) ||
+    !shouldReconcileTransformation(transformation) ||
     !transformation.provider.jobId
   ) {
     return;
@@ -38,6 +48,18 @@ async function reconcileTransformation(transformation: TransformationDocument) {
     const project = await getMagicHourImageProject(transformation.provider.jobId);
 
     if (project.status === "rendering") {
+      const staleBefore = new Date(
+        Date.now() - providerStatusTimeoutMilliseconds,
+      );
+
+      if (
+        (transformation.status === "queued" || transformation.status === "processing") &&
+        transformation.updatedAt < staleBefore
+      ) {
+        await markTimedOutByProviderJobId(project.id, staleBefore);
+        return;
+      }
+
       await markProcessingByProviderJobId(project.id, project.status);
       return;
     }
@@ -77,6 +99,7 @@ function getSafeError(error: TransformationError) {
     invalid_image_settings: "Magic Hour rejected these settings. Try fewer results or a different model or resolution.",
     provider_processing_failed: "The transformation could not be completed.",
     output_copy_failed: "The generated image could not be saved. Retrying automatically.",
+    provider_status_timeout: "The transformation took longer than expected. Please try again.",
   };
 
   return {

@@ -211,6 +211,36 @@ export async function markProcessingByProviderJobId(
   );
 }
 
+export async function markTimedOutByProviderJobId(
+  providerJobId: string,
+  staleBefore: Date,
+) {
+  const collection = await getTransformationCollection();
+  const now = new Date();
+
+  // Keep recent provider updates authoritative; only stale active jobs can time out.
+  return collection.findOneAndUpdate(
+    {
+      "provider.jobId": providerJobId,
+      status: { $in: ["queued", "processing"] },
+      updatedAt: { $lt: staleBefore },
+    },
+    {
+      $set: {
+        status: "failed",
+        error: {
+          stage: "processing",
+          code: "provider_status_timeout",
+          message: "The transformation took longer than expected. Please try again.",
+          retryable: true,
+        },
+        updatedAt: now,
+      },
+    },
+    { returnDocument: "after" },
+  );
+}
+
 export async function claimForOutputSave(
   providerJobId: string,
   input: { rawStatus: string; creditsCharged?: number },

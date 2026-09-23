@@ -123,6 +123,7 @@ The signed webhook is the low-latency update path. The history endpoint also che
 - API keys and database credentials stay on the server.
 - Webhook signatures are checked before processing provider events.
 - Webhook and history reconciliation share an atomic output-save claim, so the same image result cannot be stored twice.
+- Active provider jobs that do not update for 5 minutes are marked as retryable, and failed output copies are retried during history reconciliation.
 - Invalid API input and provider failures show safe user-facing error messages.
 - Duplicate webhook events do not create duplicate generated images.
 
